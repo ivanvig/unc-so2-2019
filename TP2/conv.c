@@ -4,6 +4,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <time.h>
+
 /* Handle errors by printing an error message and exiting with a
  * non-zero status. */
 #define ERRCODE 2
@@ -34,6 +36,8 @@ struct matrix2d{
 };
 
 int convolve2d(struct matrix2d *img, struct matrix2d *kernel, struct matrix2d *out_buff);
+int convolve2d_v2(struct matrix2d *img, struct matrix2d *kernel, struct matrix2d *out_buff);
+int acc_convolve(float *img_vector, float *kernel_vector, float *out_vector, size_t out_vector_size);
 float min(struct matrix2d *matrix);
 float max(struct matrix2d *matrix);
 
@@ -42,11 +46,12 @@ int main()
         int ncid, varid;
         int retval;
 
-        int filed;
+        /* int filed; */
         /* float data_in[NX][NY]; */
         float *data_in = (float *)malloc(NX * NY * sizeof(float));
         /* float *data_out = (float *)malloc(OUTSIZE(NX, KSIZE) * OUTSIZE(NY, KSIZE) * sizeof(float)); */
         float *data_out = (float *)calloc(OUTSIZE(NX, KSIZE) * OUTSIZE(NY, KSIZE), sizeof(float));
+        float *data_out1 = (float *)calloc(OUTSIZE(NX, KSIZE) * OUTSIZE(NY, KSIZE), sizeof(float));
 
         float kernel_val[KSIZE][KSIZE] = {
                 {-1, -1, -1},
@@ -56,6 +61,7 @@ int main()
 
         struct matrix2d *matrix_in  = &(struct matrix2d){NY, NX, data_in};
         struct matrix2d *matrix_out = &(struct matrix2d){OUTSIZE(NY, KSIZE), OUTSIZE(NX, KSIZE), data_out};
+        struct matrix2d *matrix_out1 = &(struct matrix2d){OUTSIZE(NY, KSIZE), OUTSIZE(NX, KSIZE), data_out1};
         struct matrix2d *kernel     = &(struct matrix2d){KSIZE, KSIZE, (float *)kernel_val};
 
         if ((retval = nc_open(FILE_NAME, NC_NOWRITE, &ncid)))
@@ -74,31 +80,47 @@ int main()
                 ERR(retval);
 
         /* el desarrollo acá */
-        filed = open("inmatrix.bin", O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
-        int x = 0;
-        while (x < (int)(NX * NX * sizeof(float))){
-                x += write(filed, matrix_in->matrix, (NX * NX * sizeof(float)));
-        }
-        close(filed);
+        /* filed = open("inmatrix.bin", O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR); */
+        /* int x = 0; */
+        /* while (x < (int)(NX * NX * sizeof(float))){ */
+        /*         x += write(filed, matrix_in->matrix, (NX * NX * sizeof(float))); */
+        /* } */
+        /* close(filed); */
 
-        printf("Calculando minimo ...\n");
-        printf("Minimo: %f\n", min(matrix_in));
-        printf("Calculando maximo ...\n");
-        printf("Maximo: %f\n", max(matrix_in));
+        /* printf("Calculando minimo ...\n"); */
+        /* printf("Minimo: %f\n", min(matrix_in)); */
+        /* printf("Calculando maximo ...\n"); */
+        /* printf("Maximo: %f\n", max(matrix_in)); */
         printf("Convolucionando ... \n");
-        convolve2d(matrix_in, kernel, matrix_out);
+        clock_t start, end;
+        double cpu_use;
 
-        free(data_in);
+        start = clock();
+        convolve2d(matrix_in, kernel, matrix_out);
+        end = clock();
+        cpu_use = ((double) (end - start)) / CLOCKS_PER_SEC;
+        printf("Conv1: %f\n", cpu_use);
         printf("Calculando minimo ...\n");
         printf("Minimo: %f\n", min(matrix_out));
         printf("Calculando maximo ...\n");
         printf("Maximo: %f\n", max(matrix_out));
 
-        filed = open("outmatrix.bin", O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
-        write(filed, matrix_out->matrix, (OUTSIZE(NX, KSIZE) * OUTSIZE(NY, KSIZE) * sizeof(float)));
-        close(filed);
+        start = clock();
+        convolve2d_v2(matrix_in, kernel, matrix_out1);
+        end = clock();
+        cpu_use = ((double) (end - start)) / CLOCKS_PER_SEC;
+        printf("Conv2: %f\n", cpu_use);
 
-        free(data_out);
+        printf("Calculando minimo ...\n");
+        printf("Minimo: %f\n", min(matrix_out1));
+        printf("Calculando maximo ...\n");
+        printf("Maximo: %f\n", max(matrix_out1));
+
+        /* filed = open("outmatrix.bin", O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR); */
+        /* write(filed, matrix_out->matrix, (OUTSIZE(NX, KSIZE) * OUTSIZE(NY, KSIZE) * sizeof(float))); */
+        /* close(filed); */
+
+        /* free(data_out); */
 
 
 
@@ -116,6 +138,30 @@ int convolve2d(struct matrix2d *img, struct matrix2d *kernel, struct matrix2d *o
                                 }
                         }
                 }
+        }
+        return 0;
+}
+
+int acc_convolve(float *img_vector, float *kernel_vector, float *out_vector, size_t out_vector_size)
+{
+        // TODO: comprobar que el tamaño de out_buff es par
+        register float v00, v01, v02;
+        for (size_t col = 0; col < out_vector_size; col++){
+                v00 = img_vector[col + 0] * kernel_vector[0];
+                v01 = img_vector[col + 1] * kernel_vector[1];
+                v02 = img_vector[col + 2] * kernel_vector[2];
+
+                out_vector[col]   += v00 + v01 + v02;
+        }
+        return 0;
+}
+
+int convolve2d_v2(struct matrix2d *img, struct matrix2d *kernel, struct matrix2d *out_buff)
+{
+        for (size_t row = 2; row < out_buff->colsize; row++){
+                acc_convolve(&MATRIXACCESS(img, row, 0), &MATRIXACCESS(kernel, 2, 0), &MATRIXACCESS(out_buff, row-2, 0), out_buff->rowsize);
+                acc_convolve(&MATRIXACCESS(img, row, 0), &MATRIXACCESS(kernel, 1, 0), &MATRIXACCESS(out_buff, row-1, 0), out_buff->rowsize);
+                acc_convolve(&MATRIXACCESS(img, row, 0), &MATRIXACCESS(kernel, 0, 0), &MATRIXACCESS(out_buff, row-0, 0), out_buff->rowsize);
         }
         return 0;
 }

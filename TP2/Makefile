@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Werror -Wall -pedantic
+CFLAGS=-Werror -Wall -pedantic -O3 -march=skylake
 NCFLAGS = -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
 
 all: main
