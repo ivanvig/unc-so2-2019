@@ -39,13 +39,9 @@ struct matrix2d{
 int convolve2d(struct matrix2d *img, struct matrix2d *kernel, struct matrix2d *out_buff);
 int parallel_convolve2d(struct matrix2d *img, struct matrix2d *kernel, struct matrix2d *out_buff);
 int convolve2d_v2(struct matrix2d *img, struct matrix2d *kernel, struct matrix2d *out_buff);
-int convolve2d_v3(struct matrix2d *img, struct matrix2d *kernel, struct matrix2d *out_buff);
-int convolve2d_v32(struct matrix2d *img, struct matrix2d *kernel, struct matrix2d *out_buff);
 int parallel_convolve2d_v2(struct matrix2d *img, struct matrix2d *kernel, struct matrix2d *out_buff);
-int parallel_convolve2d_v3(struct matrix2d *img, struct matrix2d *kernel, struct matrix2d *out_buff);
-int parallel_convolve2d_v32(struct matrix2d *img, struct matrix2d *kernel, struct matrix2d *out_buff);
+
 int acc_convolve(float *img_vector, float *kernel_vector, float *out_vector, size_t out_vector_size);
-int parallel_acc_convolve(float *img_vector, float *kernel_vector, float *out_vector, size_t out_vector_size);
 float min(struct matrix2d *matrix);
 float max(struct matrix2d *matrix);
 int equals(struct matrix2d *matrix1, struct matrix2d *matrix2);
@@ -54,6 +50,9 @@ int main()
 {
         int ncid, varid;
         int retval;
+        int nthrds = omp_get_max_threads();
+
+        char* msg;
 
         double runtime;
 
@@ -63,7 +62,6 @@ int main()
         /* float *data_out = (float *)malloc(OUTSIZE(NX, KSIZE) * OUTSIZE(NY, KSIZE) * sizeof(float)); */
         float *data_out = (float *)calloc(OUTSIZE(NX, KSIZE) * OUTSIZE(NY, KSIZE), sizeof(float));
         float *data_out1 = (float *)calloc(OUTSIZE(NX, KSIZE) * OUTSIZE(NY, KSIZE), sizeof(float));
-        float *data_out2 = (float *)calloc(OUTSIZE(NX, KSIZE) * OUTSIZE(NY, KSIZE), sizeof(float));
 
         float kernel_val[KSIZE][KSIZE] = {
                 {-1, -1, -1},
@@ -72,9 +70,10 @@ int main()
         };
 
         struct matrix2d *matrix_in  = &(struct matrix2d){NY, NX, data_in};
+
         struct matrix2d *matrix_out = &(struct matrix2d){OUTSIZE(NY, KSIZE), OUTSIZE(NX, KSIZE), data_out};
         struct matrix2d *matrix_out1 = &(struct matrix2d){OUTSIZE(NY, KSIZE), OUTSIZE(NX, KSIZE), data_out1};
-        struct matrix2d *matrix_out2 = &(struct matrix2d){OUTSIZE(NY, KSIZE), OUTSIZE(NX, KSIZE), data_out2};
+
         struct matrix2d *kernel     = &(struct matrix2d){KSIZE, KSIZE, (float *)kernel_val};
 
         if ((retval = nc_open(FILE_NAME, NC_NOWRITE, &ncid)))
@@ -102,34 +101,51 @@ int main()
 
         printf("Convolucionando ... \n");
 
+        /* ORIGINAL */
         runtime = omp_get_wtime();
-        parallel_convolve2d(matrix_in, kernel, matrix_out);
+        convolve2d(matrix_in, kernel, matrix_out);
         runtime = omp_get_wtime() - runtime;
-        printf("Conv1: %f\n", runtime);
+        printf("Conv original procedural: %f\n", runtime);
 
+        /* v2 PROCEDURAL */
         runtime = omp_get_wtime();
-        convolve2d_v3(matrix_in, kernel, matrix_out1);
+        convolve2d_v2(matrix_in, kernel, matrix_out1);
         runtime = omp_get_wtime() - runtime;
-        printf("Conv3: %f\n", runtime);
+        printf("Conv_v2 procedural: %f\n", runtime);
 
+        printf("Checkeando igualdad con original ... \n");
+        msg = equals(matrix_out, matrix_out1) ? "VAAAAAAMO ÑUBEEEL!\n" : "NOOOOOOOO ESTAMOS EN LA B\n";
+        printf("%s", msg);
+
+        free(matrix_out1->matrix);
+        matrix_out1->matrix = (float *)calloc(OUTSIZE(NX, KSIZE) * OUTSIZE(NY, KSIZE), sizeof(float));
+
+        /* ORIGINAL PARALELA */
         runtime = omp_get_wtime();
-        parallel_convolve2d_v32(matrix_in, kernel, matrix_out2);
+        parallel_convolve2d(matrix_in, kernel, matrix_out1);
         runtime = omp_get_wtime() - runtime;
-        printf("Conv32: %f\n", runtime);
+        printf("Conv original paralela con %d thrds: %f\n", nthrds, runtime);
 
-        printf("Checkeando igualda con v3 ... \n");
-        if (equals(matrix_out, matrix_out1)) {
-                printf("VAAAAAAMO ÑUBEEEL!\n");
-        } else {
-                printf("NOOOOOOOO ESTAMOS EN LA B\n");
-        }
+        printf("Checkeando igualdad con original ... \n");
+        msg = equals(matrix_out, matrix_out1) ? "VAAAAAAMO ÑUBEEEL!\n" : "NOOOOOOOO ESTAMOS EN LA B\n";
+        printf("%s", msg);
 
-        printf("Checkeando igualda con v32 ... \n");
-        if (equals(matrix_out, matrix_out2)) {
-                printf("VAAAAAAMO ÑUBEEEL!\n");
-        } else {
-                printf("NOOOOOOOO ESTAMOS EN LA B\n");
-        }
+        free(matrix_out1->matrix);
+        matrix_out1->matrix = (float *)calloc(OUTSIZE(NX, KSIZE) * OUTSIZE(NY, KSIZE), sizeof(float));
+
+        /* v2 PARALELA */
+        runtime = omp_get_wtime();
+        parallel_convolve2d_v2(matrix_in, kernel, matrix_out1);
+        runtime = omp_get_wtime() - runtime;
+        printf("Conv original paralela con %d thrds: %f\n", nthrds, runtime);
+
+        printf("Checkeando igualdad con original ... \n");
+        msg = equals(matrix_out, matrix_out1) ? "VAAAAAAMO ÑUBEEEL!\n" : "NOOOOOOOO ESTAMOS EN LA B\n";
+        printf("%s", msg);
+
+        free(matrix_out1->matrix);
+        matrix_out1->matrix = (float *)calloc(OUTSIZE(NX, KSIZE) * OUTSIZE(NY, KSIZE), sizeof(float));
+
         /* filed = open("outmatrix.bin", O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR); */
         /* write(filed, matrix_out->matrix, (OUTSIZE(NX, KSIZE) * OUTSIZE(NY, KSIZE) * sizeof(float))); */
         /* close(filed); */
@@ -193,37 +209,7 @@ int acc_convolve(float *img_vector, float *kernel_vector, float *out_vector, siz
         }
         return 0;
 }
-
 int convolve2d_v2(struct matrix2d *img, struct matrix2d *kernel, struct matrix2d *out_buff)
-{
-        // condicion de borde
-        acc_convolve(&MATRIXACCESS(img, 0, 0), &MATRIXACCESS(kernel, 0, 0), &MATRIXACCESS(out_buff, 0, 0), out_buff->rowsize);
-        acc_convolve(&MATRIXACCESS(img, 1, 0), &MATRIXACCESS(kernel, 1, 0), &MATRIXACCESS(out_buff, 0, 0), out_buff->rowsize);
-        acc_convolve(&MATRIXACCESS(img, 1, 0), &MATRIXACCESS(kernel, 0, 0), &MATRIXACCESS(out_buff, 1, 0), out_buff->rowsize);
-
-        for (size_t row = 2; row < out_buff->rowsize; row++){
-                acc_convolve(&MATRIXACCESS(img, row, 0), &MATRIXACCESS(kernel, 2, 0), &MATRIXACCESS(out_buff, row-2, 0), out_buff->rowsize);
-                acc_convolve(&MATRIXACCESS(img, row, 0), &MATRIXACCESS(kernel, 1, 0), &MATRIXACCESS(out_buff, row-1, 0), out_buff->rowsize);
-                acc_convolve(&MATRIXACCESS(img, row, 0), &MATRIXACCESS(kernel, 0, 0), &MATRIXACCESS(out_buff, row-0, 0), out_buff->rowsize);
-        }
-
-        acc_convolve(&MATRIXACCESS(img, img->colsize-2, 0), &MATRIXACCESS(kernel, 2, 0), &MATRIXACCESS(out_buff, out_buff->colsize-2, 0), out_buff->rowsize);
-        acc_convolve(&MATRIXACCESS(img, img->colsize-2, 0), &MATRIXACCESS(kernel, 1, 0), &MATRIXACCESS(out_buff, out_buff->colsize-1, 0), out_buff->rowsize);
-        acc_convolve(&MATRIXACCESS(img, img->colsize-1, 0), &MATRIXACCESS(kernel, 2, 0), &MATRIXACCESS(out_buff, out_buff->colsize-1, 0), out_buff->rowsize);
-        return 0;
-}
-
-int convolve2d_v3(struct matrix2d *img, struct matrix2d *kernel, struct matrix2d *out_buff)
-{
-        for (size_t i = 0; i < kernel->colsize; i++) {
-                for (size_t row = i; row < out_buff->colsize + i; row++) {
-                        acc_convolve(&MATRIXACCESS(img, row, 0), &MATRIXACCESS(kernel, i, 0), &MATRIXACCESS(out_buff, row-i, 0), out_buff->rowsize);
-                }
-        }
-        return 0;
-}
-
-int convolve2d_v32(struct matrix2d *img, struct matrix2d *kernel, struct matrix2d *out_buff)
 {
         for (size_t row = 0; row < out_buff->colsize; row++) {
                 for (size_t i = 0; i < kernel->colsize; i++) {
@@ -233,57 +219,12 @@ int convolve2d_v32(struct matrix2d *img, struct matrix2d *kernel, struct matrix2
         return 0;
 }
 
-int parallel_convolve2d_v32(struct matrix2d *img, struct matrix2d *kernel, struct matrix2d *out_buff)
+int parallel_convolve2d_v2(struct matrix2d *img, struct matrix2d *kernel, struct matrix2d *out_buff)
 {
 #pragma omp parallel for
         for (size_t row = 0; row < out_buff->colsize; row++) {
                 for (size_t i = 0; i < kernel->colsize; i++) {
                         acc_convolve(&MATRIXACCESS(img, row + i, 0), &MATRIXACCESS(kernel, i, 0), &MATRIXACCESS(out_buff, row, 0), out_buff->rowsize);
-                }
-        }
-        return 0;
-}
-
-int parallel_acc_convolve(float *img_vector, float *kernel_vector, float *out_vector, size_t out_vector_size)
-{
-        // TODO: comprobar que el tamaño de out_buff es par
-        register float v00, v01, v02;
-        /* register float v10, v11, v12; */
-        for (size_t col = 0; col < out_vector_size; col++){
-        /* for (size_t col = 0; col < out_vector_size; col+=2){ */
-                v00 = img_vector[col + 0] * kernel_vector[0];
-                v01 = img_vector[col + 1] * kernel_vector[1];
-                v02 = img_vector[col + 2] * kernel_vector[2];
-
-                /* v10 = img_vector[col + 1 + 0] * kernel_vector[0]; */
-                /* v11 = img_vector[col + 1 + 1] * kernel_vector[1]; */
-                /* v12 = img_vector[col + 1 + 2] * kernel_vector[2]; */
-
-#pragma omp atomic
-                out_vector[col]   += v00 + v01 + v02;
-/* #pragma omp atomic */
-/*                 out_vector[col+1]   += v10 + v11 + v12; */
-        }
-        return 0;
-}
-
-int parallel_convolve2d_v3(struct matrix2d *img, struct matrix2d *kernel, struct matrix2d *out_buff)
-{
-        int tid;
-        size_t i, row;
-/* #pragma omp parallel private(tid, i, row) */
-#pragma omp parallel private(i, row)
-        {
-                tid = omp_get_thread_num();
-                if (tid == 0)
-                        printf("Corriendo con %d threads.\n", omp_get_num_threads());
-
-                for (i = 0; i < kernel->colsize; i++) {
-                        /* for (row = tid + i; row < (out_buff->colsize + i); row += nthrds) { */
-#pragma omp for
-                        for (row = i; row < (out_buff->colsize + i); row++) {
-                                acc_convolve(&MATRIXACCESS(img, row, 0), &MATRIXACCESS(kernel, i, 0), &MATRIXACCESS(out_buff, row-i, 0), out_buff->rowsize);
-                        }
                 }
         }
         return 0;
