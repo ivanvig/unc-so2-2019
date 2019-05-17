@@ -99,26 +99,26 @@ int main()
         /* } */
         /* close(filed); */
 
-        printf("Convolucionando ... \n");
+        /* printf("Convolucionando ... \n"); */
 
-        /* ORIGINAL */
-        runtime = omp_get_wtime();
-        convolve2d(matrix_in, kernel, matrix_out);
-        runtime = omp_get_wtime() - runtime;
-        printf("Conv original procedural: %f\n", runtime);
+        /* /\* ORIGINAL *\/ */
+        /* runtime = omp_get_wtime(); */
+        /* convolve2d(matrix_in, kernel, matrix_out); */
+        /* runtime = omp_get_wtime() - runtime; */
+        /* printf("Conv original procedural: %f\n", runtime); */
 
-        /* v2 PROCEDURAL */
-        runtime = omp_get_wtime();
-        convolve2d_v2(matrix_in, kernel, matrix_out1);
-        runtime = omp_get_wtime() - runtime;
-        printf("Conv_v2 procedural: %f\n", runtime);
+        /* /\* v2 PROCEDURAL *\/ */
+        /* runtime = omp_get_wtime(); */
+        /* convolve2d_v2(matrix_in, kernel, matrix_out1); */
+        /* runtime = omp_get_wtime() - runtime; */
+        /* printf("Conv_v2 procedural: %f\n", runtime); */
 
-        printf("Checkeando igualdad con original ... \n");
-        msg = equals(matrix_out, matrix_out1) ? "VAAAAAAMO ÑUBEEEL!\n" : "NOOOOOOOO ESTAMOS EN LA B\n";
-        printf("%s", msg);
+        /* printf("Checkeando igualdad con original ... \n"); */
+        /* msg = equals(matrix_out, matrix_out1) ? "VAAAAAAMO ÑUBEEEL!\n" : "NOOOOOOOO ESTAMOS EN LA B\n"; */
+        /* printf("%s", msg); */
 
-        free(matrix_out1->matrix);
-        matrix_out1->matrix = (float *)calloc(OUTSIZE(NX, KSIZE) * OUTSIZE(NY, KSIZE), sizeof(float));
+        /* free(matrix_out1->matrix); */
+        /* matrix_out1->matrix = (float *)calloc(OUTSIZE(NX, KSIZE) * OUTSIZE(NY, KSIZE), sizeof(float)); */
 
         /* ORIGINAL PARALELA */
         runtime = omp_get_wtime();
@@ -126,9 +126,9 @@ int main()
         runtime = omp_get_wtime() - runtime;
         printf("Conv original paralela con %d thrds: %f\n", nthrds, runtime);
 
-        printf("Checkeando igualdad con original ... \n");
-        msg = equals(matrix_out, matrix_out1) ? "VAAAAAAMO ÑUBEEEL!\n" : "NOOOOOOOO ESTAMOS EN LA B\n";
-        printf("%s", msg);
+        /* printf("Checkeando igualdad con original ... \n"); */
+        /* msg = equals(matrix_out, matrix_out1) ? "VAAAAAAMO ÑUBEEEL!\n" : "NOOOOOOOO ESTAMOS EN LA B\n"; */
+        /* printf("%s", msg); */
 
         free(matrix_out1->matrix);
         matrix_out1->matrix = (float *)calloc(OUTSIZE(NX, KSIZE) * OUTSIZE(NY, KSIZE), sizeof(float));
@@ -137,11 +137,11 @@ int main()
         runtime = omp_get_wtime();
         parallel_convolve2d_v2(matrix_in, kernel, matrix_out1);
         runtime = omp_get_wtime() - runtime;
-        printf("Conv original paralela con %d thrds: %f\n", nthrds, runtime);
+        printf("Conv v2 paralela con %d thrds: %f\n", nthrds, runtime);
 
-        printf("Checkeando igualdad con original ... \n");
-        msg = equals(matrix_out, matrix_out1) ? "VAAAAAAMO ÑUBEEEL!\n" : "NOOOOOOOO ESTAMOS EN LA B\n";
-        printf("%s", msg);
+        /* printf("Checkeando igualdad con original ... \n"); */
+        /* msg = equals(matrix_out, matrix_out1) ? "VAAAAAAMO ÑUBEEEL!\n" : "NOOOOOOOO ESTAMOS EN LA B\n"; */
+        /* printf("%s", msg); */
 
         free(matrix_out1->matrix);
         matrix_out1->matrix = (float *)calloc(OUTSIZE(NX, KSIZE) * OUTSIZE(NY, KSIZE), sizeof(float));
