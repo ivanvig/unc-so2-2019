@@ -78,16 +78,96 @@ Ivan M. \textsc{Vignolles}\\[1.5cm] % Your name
 \end{titlepage}
 
 \section{Objetivo}
-El objetivo del trabajo es implementar la operaci\'on de convoluci\'on discreta
+El objetivo del trabajo es implementar en C la operaci\'on de convoluci\'on discreta
 en dos dimensiones y aplicarla junto con un kernel de detecci\'on de bordes a la
-imagen que se observa en la Fig.~\ref{mundo}, luego paralelizar dicho algoritmo y analizar el cambio en
-los tiempos de ejecuci\'on.
+imagen que se observa en la Fig.~\ref{mundo}, luego paralelizar dicho algoritmo
+utilizando \textit{OpenMP} y analizar el cambio en los tiempos de ejecuci\'on.
 
-\begin{figure}
+\begin{figure}[H]
 \centering
 \includegraphics[scale=.5]{planeta}
-\caption{Imagen utilizada en el desarrollo del trabajo.}
-\label{mundo}
+\caption{Imagen utilizada en el desarrollo del trabajo.}\label{mundo}
 \end{figure}
 
+\section{Desarrollo}
+\subsection{Carga de la imagen a memoria}
+Los datos de la imagen se encuentran en un archivo de tipo \textit{nc} por lo
+que para poder acceder a ellos es necesario instalar la librer\'ia
+\textit{NetCDF4}. La imagen tiene un tamaño de $21696\times21696$ pixels, donde
+cada pixel es una variable del tipo \textit{float} de 32 bits cuyo rango
+v\'alido de valores es $0 - 4096$ y representa el nivel de brillo.
+
+\subsection{Ejecuci\'on procedural}
+En primera instancia se implement\'o la convoluci\'on de forma procedural, esto
+es, un solo hilo es el encargado de ejecutar las instrucciones del programa.
+
+Se desarrollaron dos algoritmos diferentes para aplicar la convoluci\'on en 2D,
+el primero corresponde a la forma cl\'asica que consta de cuatro bucles anidados
+y realiza la acumulaci\'on de todos productos de los coeficientes del kernel con
+la secci\'on correspondiente de la imagen antes de desplazarse horizontal o
+verticalmente para generar un nuevo pixel de salida. La salida producida por
+este m\'etodo se considera la deseada y es utilizada como referencia para
+corroborar que las salidas generadas por los algoritmos son correctas.
+
+El segundo algoritmo intenta hacer un uso mas eficiente de los datos ya
+disponibles en la memoria cache teniendo en cuenta que la ubicac\'ion de los
+datos en memoria tanto de la imagen original como la procesada es \textit{row
+  major}. Para ello, toma una fila de la imagen original y realiza 3
+convoluciones 1D con cada fila del kernel (considerando un kernel de 3 filas)
+produciendo as\'i 3 filas con resultados parciales. Luego se pasa la fila
+siguiente de la imagen y se producen otras 3 nuevas filas de resultados
+parciales que se acumulan con las anteriores de forma tal que el resultado
+obtenido se corresponda con una convoluci\'on 2D.
+
+\subsection{Ejecuci\'on paralela}
+Se paralelizaron ambos algoritmos descritos en la secci\'on anterior, para ello
+se hizo uso de los pragmas \texttt{parallel}, y \texttt{for} que provee OpenMP.
+No fue necesario el uso de m\'etodos de sincronizaci\'on como \texttt{critical}
+o \texttt{atomic} pues se considera que no existe alg\'un caso donde pudiera
+haber un conflicto entre hilos.
+
+\section{Resultados}
+Para obtener los resultados se utilizaron dos computadoras, una local
+
+\begin{table}
+% increase table row spacing, adjust to taste
+\renewcommand{\arraystretch}{1.3}
+% if using array.sty, it might be a good idea to tweak the value of
+% \extrarowheight as needed to properly center the text within the cells
+\caption{Utilización de recursos con y sin DSP.}
+\label{res_table}
+\centering
+% some packages, such as mdw tools, offer better commands for making tables
+% than the plain latex2e tabular which is used here.
+\footnotesize
+\begin{tabular}{|l|p{5cm}|}
+  \hline
+Arquitectura                        & x86\_64 \\ \hline
+modo(s) de operación de las CPUs    & 32-bit, 64-bit \\ \hline
+Orden de los bytes                  & Little Endian \\ \hline
+Tamaños de las direcciones          & 39 bits physical, 48 bits virtual \\ \hline
+CPU(s)                              & 4 \\ \hline
+Lista de la(s) CPU(s) en línea      & 0-3 \\ \hline
+Hilo(s) de procesamiento por núcleo & 1 \\ \hline
+Núcleo(s) por «socket»              & 4 \\ \hline
+«Socket(s)»                          & 1 \\ \hline
+Modo(s) NUMA                        & 1 \\ \hline
+ID de fabricante                    & GenuineIntel \\ \hline
+Familia de CPU                      & 6 \\ \hline
+Modelo                              & 94 \\ \hline
+Nombre del modelo                   & Intel(R) Core(TM) i5-6500 CPU @ 3.20GHz \\ \hline
+Revisión                            & 3 \\ \hline
+CPU MHz                             & 800.039 \\ \hline
+CPU MHz máx.                        & 3600,0000 \\ \hline
+CPU MHz mín.                        & 800,0000 \\ \hline
+BogoMIPS                            & 6386.00 \\ \hline
+Virtualización                      & VT-x \\ \hline
+Caché L1d                           & 32K \\ \hline
+Caché L1i                           & 32K \\ \hline
+Caché L2                            & 256K \\ \hline
+Caché L3                            & 6144K \\ \hline
+CPU(s) del nodo NUMA 0              & 0-3 \\ \hline
+Indicadores                         & \textbf{fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf tsc_known_freq pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb invpcid_single pti ssbd ibrs ibpb stibp tpr_shadow vnmi flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 hle avx2 smep bmi2 erms invpcid rtm mpx rdseed adx smap clflushopt intel_pt xsaveopt xsavec xgetbv1 xsaves dtherm ida arat pln pts hwp hwp_notify hwp_act_window hwp_epp flush_l1d}
+\end{tabular}           
+\end{table}
 \end{document}
