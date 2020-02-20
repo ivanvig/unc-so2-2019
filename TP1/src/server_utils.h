@@ -2,24 +2,14 @@
 #define __SERVER_UTILS_H_
 
 #include <netinet/in.h>
-#include "remote.h"
 
-#define SERV_PORT 6020
 #define N_MAX_CONN 10
+#define DPROMPT ">> "
+#define MAX_PROMPT_SIZE 64
+#define min(i, j) (((i) < (j)) ? (i) : (j))
 
-struct connect_descriptor {
-	int sockfd;
-	uint8_t valid;
-	char name[MAX_NAME_SIZE];
-};
-
-void start_server(int sockfd_local);
-int sv_list_connections(int sockfd_local, struct connect_descriptor *conn_table,
-			int nentries);
-int get_conn_fd(char *name, struct connect_descriptor *conn_table);
 void listen_setup(int *sockfd, struct sockaddr_in *serv_addr);
-int load_new_connection(char *name, int sockfd,
-			struct connect_descriptor *connection_table,
-			int nentries);
+void sv_cli(int sockfd, struct sockaddr_in *connect_addr,
+	    socklen_t connect_addr_len);
 
 #endif // __SERVER_UTILS_H_

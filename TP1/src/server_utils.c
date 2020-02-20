@@ -4,45 +4,7 @@
 #include <unistd.h>
 #include <poll.h>
 #include "server_utils.h"
-#include "local.h"
 #include "remote.h"
-
-int sv_list_connections(int sockfd_local, struct connect_descriptor *conn_table,
-			int nentries)
-{
-	int n_valid_entries = 0;
-	for (int i = 0; i < nentries; i++) {
-		if (conn_table[i].valid) {
-			n_valid_entries++;
-		}
-	}
-
-	if (write(sockfd_local, &n_valid_entries, sizeof(n_valid_entries)) <
-	    0) {
-		return -1;
-	}
-
-	for (int i = 0; i < N_MAX_CONN; i++) {
-		if (conn_table[i].valid) {
-			if (write(sockfd_local, &conn_table[i].name,
-				  MAX_NAME_SIZE) < 0) {
-				return -1;
-			}
-		}
-	}
-
-	return 0;
-}
-
-int get_conn_fd(char *name, struct connect_descriptor *conn_table)
-{
-	for (int i = 0; i < N_MAX_CONN; i++) {
-		if (conn_table[i].valid && !strcmp(name, conn_table[i].name)) {
-			return conn_table[i].sockfd;
-		}
-	}
-	return -1;
-}
 
 void listen_setup(int *sockfd, struct sockaddr_in *serv_addr)
 {
@@ -54,15 +16,15 @@ void listen_setup(int *sockfd, struct sockaddr_in *serv_addr)
 	memset(serv_addr, 0, sizeof(*serv_addr));
 	serv_addr->sin_family = AF_INET;
 	serv_addr->sin_addr.s_addr = INADDR_ANY;
-	serv_addr->sin_port = htons(SERV_PORT);
+	serv_addr->sin_port = htons(SV_PORT);
 
 	if (bind(*sockfd, (struct sockaddr *)serv_addr, sizeof(*serv_addr))) {
-		perror("[!] ERROR: No se pudo hacer el bind del socket");
+		perror("[!] ERROR: No se pudo hacer el bind del socket\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (listen(*sockfd, N_MAX_CONN)) {
-		perror("[!] ERROR: No se pudo poner el socket a la escucha");
+		perror("[!] ERROR: No se pudo poner el socket a la escucha\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -70,107 +32,68 @@ void listen_setup(int *sockfd, struct sockaddr_in *serv_addr)
 	       ntohs(serv_addr->sin_port));
 }
 
-int load_new_connection(char *name, int sockfd,
-			struct connect_descriptor *connection_table,
-			int nentries)
+void sv_cli(int sockfd, struct sockaddr_in *connect_addr,
+	    socklen_t connect_addr_len)
 {
-	for (int i = 0; i < nentries; i++) {
-		if (!connection_table[i].valid) {
-			strncpy(connection_table[i].name, name,
-				sizeof(connection_table[i].name));
-			connection_table[i].sockfd = sockfd;
-			connection_table[i].valid = 1;
-			return 0;
+	struct telemetria tel;
+	uint8_t msg = SAT_GETTEL;
+	char prompt[MAX_PROMPT_SIZE];
+
+	char *line = NULL;
+	size_t lsize = 0;
+	ssize_t nchr_read;
+	char *op;
+
+	if (write(sockfd, &msg, 1) != 1) {
+		perror("[!] ERROR: No se pudo pedir el ID del satelite\n");
+		strncpy(tel.id, "UNKNOWN", sizeof(tel.id));
+	} else {
+		if (read(sockfd, &tel, sizeof(tel)) != sizeof(tel)) {
+			perror("[!] ERROR: No se pudo recibir el ID del satelite\n");
+			strncpy(tel.id, "UNKNOWN", sizeof(tel.id));
 		}
 	}
-	return -1;
-}
 
-void start_server(int sockfd_local)
-{
-	int sockfd, connect_sockfd;
-	struct sockaddr_in connect_addr, serv_addr;
-	socklen_t connect_addr_len = sizeof(connect_addr);
-
-	struct connect_descriptor *connection_table;
-
-	struct pollfd fds[N_MAX_CONN + 2];
-	int ret, nfd;
-
-	char msg;
-	struct telemetria tel;
-
-	if ((connection_table = (struct connect_descriptor *)calloc(
-		     N_MAX_CONN, sizeof(struct connect_descriptor)))) {
-		perror("[!] ERROR: No se pudo allocar memoria para tabla de conecciones");
-		exit(EXIT_FAILURE);
-	}
-
-	listen_setup(&sockfd, &serv_addr);
-
-	fds[0].fd = sockfd;
-	fds[0].events = POLLIN;
-
-	fds[1].fd = sockfd_local;
-	fds[1].events = POLLIN;
-
-	nfd = 2;
+	strncpy(prompt, tel.id, sizeof(prompt));
+	strncat(prompt, DPROMPT, MAX_PROMPT_SIZE - strlen(prompt) - 1);
 
 	while (1) {
-		if ((ret = poll(fds, nfd, -1)) <= 0) {
-			perror("[!] ERROR: Un error ocurrio haciendo polling");
-			exit(EXIT_FAILURE);
+		printf("%s ", prompt);
+
+		if ((nchr_read = getline(&line, &lsize, stdin)) < 0) {
+			perror("[!] ERROR: CLI input error\n");
+		} else if (!nchr_read) {
+			continue;
 		}
 
-		for (int i = 0; i < nfd; i++) {
-			if (fds[i].revents & POLLIN) {
-				if (i == 0) {
-					connection_handler()
+		line[nchr_read - 1] = '\0';
+		op = strtok(line, " ");
 
-						printf("[*] Nueva conexion del satelite %s registrada",
-						       tel.id);
-
-				} else if (i == 1) {
-					command_handler(fds[i].fd);
-				}
-			} else if (fds[i].revents & POLLHUP) {
-				printf("Algo se cerro che");
+		if (!strcmp(op, "update")) {
+			msg = SAT_UPDATE;
+			if (write(sockfd, &msg, 1) != 1) {
+				perror("[!] ERROR: Intente nuevamente\n");
+				continue;
 			}
-		}
-	}
-	write_sockfd(sockfd_local, connect_sockfd);
-	close(connect_sockfd);
-}
 
-int connection_handler(int sockfd, int *connect_sockfd,
-		       struct sockaddr_in *connect_addr,
-		       socklen_t *connect_addr_len,
-		       struct connect_descriptor *connection_table)
-{
-	char msg;
-	struct telemetria tel;
+		} else if (!strcmp(op, "get")) {
+			msg = SAT_GETTEL;
+			if (write(sockfd, &msg, 1) != 1) {
+				perror("[!] ERROR: Intente nuevamente\n");
+				continue;
+			}
 
-	if ((*connect_sockfd = accept(sockfd, (struct sockaddr *)connect_addr,
-				      connect_addr_len)) < 0) {
-		return -1;
-		/* perror("[!] ERROR: La conexion con el satelite no se pudo establecer"); */
-	}
-
-	msg = SAT_GETTEL;
-	if (write(*connect_sockfd, &msg, sizeof(msg)) < 0) {
-		/* perror("[!] ERROR: Error al obtener datos del satelite"); */
-		return -2;
-	}
-
-	if (read(*connect_sockfd, &tel, sizeof(tel)) < 0) {
-		/* perror("[!] ERROR: Error al leer los datos del satelite"); */
-		return -3;
-	}
-
-	//TODO: ojo con tiempo de vida en la tabla
-	if (load_new_connection(tel.id, connect_sockfd, connection_table,
-				N_MAX_CONN) < 0) {
-		perror("[!] ERROR: No se pudo registrar la conexion");
-		continue;
+		} else if (!strcmp(op, "scan")) {
+			msg = SAT_SCAN;
+			if (write(sockfd, &msg, 1) != 1) {
+				perror("[!] ERROR: Intente nuevamente\n");
+				continue;
+			}
+		} else {
+			perror("[!] ERROR: Comando invalido\n");
+			continue;
+		};
+		read(sockfd, &msg, 1);
+		printf("%d\n\n", msg);
 	}
 }
