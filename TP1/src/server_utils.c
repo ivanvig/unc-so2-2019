@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <poll.h>
+#include <sys/sysinfo.h>
 #include "server_utils.h"
 #include "remote.h"
 
@@ -48,7 +49,8 @@ void sv_cli(int sockfd, struct sockaddr_in *connect_addr,
 		perror("[!] ERROR: No se pudo pedir el ID del satelite\n");
 		strncpy(tel.id, "UNKNOWN", sizeof(tel.id));
 	} else {
-		if (read(sockfd, &tel, sizeof(tel)) != sizeof(tel)) {
+		if (read(sockfd, &msg, 1) != 1 || msg != SAT_OK ||
+		    read(sockfd, &tel, sizeof(tel)) != sizeof(tel)) {
 			perror("[!] ERROR: No se pudo recibir el ID del satelite\n");
 			strncpy(tel.id, "UNKNOWN", sizeof(tel.id));
 		}
@@ -82,6 +84,20 @@ void sv_cli(int sockfd, struct sockaddr_in *connect_addr,
 				perror("[!] ERROR: Intente nuevamente\n");
 				continue;
 			}
+			if (read(sockfd, &msg, 1) != 1 || msg != SAT_OK ||
+			    read(sockfd, &tel, sizeof(tel)) != sizeof(tel)) {
+				perror("[!] ERROR: No se pudo recibir la telemetria\n");
+				continue;
+			} else {
+				printf("\t ID: %s\n "
+				       "\t UPTIME [s]: %ld\n"
+				       "\t VERSION: %s\n"
+				       "\t CARGA DEL SISTEMA: %f\n"
+				       "\t RAM LIBRE [KiB]: %lu\n",
+				       tel.id, tel.uptime, tel.ver,
+				       tel.load / (float)(1 << SI_LOAD_SHIFT),
+				       tel.ram_usage);
+			}
 
 		} else if (!strcmp(op, "scan")) {
 			msg = SAT_SCAN;
@@ -93,7 +109,5 @@ void sv_cli(int sockfd, struct sockaddr_in *connect_addr,
 			perror("[!] ERROR: Comando invalido\n");
 			continue;
 		};
-		read(sockfd, &msg, 1);
-		printf("%d\n\n", msg);
 	}
 }

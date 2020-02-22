@@ -34,20 +34,20 @@ default: dirs all
 # $(TARGET): $(OBJ)
 # 	$(CC) $(CFLAG) -o $@ $?
 
-$(BIN_PATH)/server: $(OBJ_PATH)/server.o $(OBJ_PATH)/server_utils.o
-	$(CC) $(CFLAG) -o $@ $?
-
-$(BIN_PATH)/client: $(OBJ_PATH)/client.o
+$(BIN_PATH)/%: $(OBJ_PATH)/%.o $(OBJ_PATH)/%_utils.o
 	$(CC) $(CFLAG) -o $@ $?
 
 $(OBJ_PATH)/%.o: $(SRC_PATH)/%.c $(SRC_PATH)/remote.h
 	$(CC) $(COBJFLAG) -o $@ $<
 
-$(DBG_PATH)/%.o: $(SRC_PATH)/%.c
+$(DBG_PATH)/%.o: $(SRC_PATH)/%.c $(SRC_PATH)/remote.h
 	$(CC) $(COBJFLAG) $(DBGFLAG) -o $@ $<
 
-$(TARGET_DEBUG): $(OBJ_DEBUG)
-	$(CC) $(CFLAG) $(DBGFLAG) $? -o $@
+# $(TARGET_DEBUG): $(OBJ_DEBUG)
+# 	$(CC) $(CFLAG) $(DBGFLAG) $? -o $@
+
+$(DBG_PATH)/%: $(DBG_PATH)/%.o $(DBG_PATH)/%_utils.o
+	$(CC) $(CFLAG) $(DBGFLAG) -o $@ $?
 
 # phony rules
 .PHONY: all

@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "remote.h"
+#include "client_utils.h"
 
 int main(int argc, char **argv)
 {
@@ -35,11 +36,23 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	printf("[*] Conexion establecida con %s en puerto %d\n",
-	       inet_ntoa(serv_addr.sin_addr), ntohs(serv_addr.sin_port));
+	printf("[*] Conexion establecida\n");
 
 	while (1) {
+		struct telemetria tel;
 		read(sockfd, &msg, 1);
-		write(sockfd, &msg, 1);
+
+		switch (msg) {
+		case SAT_GETTEL:
+			if (gettel(&tel)) {
+				perror("[!] ERROR: No se pudo obtener telemetria\n");
+				msg = SAT_ERR;
+				write(sockfd, &msg, 1);
+			} else {
+				msg = SAT_OK;
+				write(sockfd, &msg, 1);
+				write(sockfd, &tel, sizeof(tel));
+			}
+		}
 	}
 }
