@@ -7,6 +7,7 @@
 #include <poll.h>
 
 #include "server_utils.h"
+#include "remote.h"
 
 int main(int argc, char const *argv[])
 {
@@ -15,7 +16,15 @@ int main(int argc, char const *argv[])
 	struct sockaddr_in connect_addr, serv_addr;
 	socklen_t connect_addr_len = sizeof(connect_addr);
 
-	listen_setup(&sockfd, &serv_addr);
+	sock_setup(&sockfd, &serv_addr, SOCK_STREAM, SV_PORT);
+
+	if (listen(sockfd, N_MAX_CONN)) {
+		perror("[!] ERROR: No se pudo poner el socket a la escucha\n");
+		exit(EXIT_FAILURE);
+	}
+
+	printf("[*] Servidor listo a la escucha en puerto %d\n",
+	       ntohs(serv_addr.sin_port));
 
 	while (1) {
 		connect_sockfd =

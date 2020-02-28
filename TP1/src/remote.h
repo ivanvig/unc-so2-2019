@@ -11,9 +11,21 @@
 #define SAT_INV 0xEA
 #define SAT_OK 0xAA
 
+#define CONN_BW 100 // Mbits/s
+/* #define CONN_RTT 20 // ms */
+#define CONN_RTT 10 // ms
+#define BWD_PROD (1000 * CONN_BW * CONN_RTT / 8)
+#define OPT_SOCK_BUF (4 * BWD_PROD / (3 * 2))
+
+#define TCP_HDR 20
+#define IP_HDR 20
+#define MTU 1500
+#define MSS MTU - IP_HDR - TCP_HDR
+
 #define SV_PORT 6020
-/* #define SV_IP "172.0.0.1" */
+#define SV_FPORT 6021
 #define SV_IP "192.168.0.10"
+/* #define SV_IP "192.168.2.107" */
 
 struct telemetria {
 	char id[MAX_NAME_SIZE];

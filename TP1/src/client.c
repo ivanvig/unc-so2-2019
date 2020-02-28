@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "remote.h"
 #include "client_utils.h"
@@ -41,18 +42,42 @@ int main(int argc, char **argv)
 	while (1) {
 		struct telemetria tel;
 		read(sockfd, &msg, 1);
+		int fd;
 
+		//TODO: checkear error de los write
 		switch (msg) {
 		case SAT_GETTEL:
-			if (gettel(&tel)) {
-				perror("[!] ERROR: No se pudo obtener telemetria\n");
-				msg = SAT_ERR;
-				write(sockfd, &msg, 1);
-			} else {
+			printf("[*] Comando 'get' recibido\n");
+			if (!gettel(&tel)) {
+				printf("[*] Enviando telemetria\n");
 				msg = SAT_OK;
 				write(sockfd, &msg, 1);
 				write(sockfd, &tel, sizeof(tel));
+			} else {
+				perror("[!] Error obteniendo telemetria");
+				msg = SAT_ERR;
+				write(sockfd, &msg, 1);
 			}
+			break;
+		case SAT_SCAN:
+			printf("[*] Comando 'scan' recibido\n");
+			if ((fd = open(FPATH, O_RDONLY)) < 0) {
+				perror("[!] Error abriendo archivo");
+				msg = SAT_ERR;
+				write(sockfd, &msg, 1);
+			} else {
+				printf("[*] Enviando imagen\n");
+				msg = SAT_OK;
+				write(sockfd, &msg, 1);
+				send_scan(sockfd, fd);
+				close(fd);
+			}
+			break;
+		default:
+			perror("[!] Comando invalido");
+			msg = SAT_INV;
+			write(sockfd, &msg, 1);
+			break;
 		}
 	}
 }

@@ -5,11 +5,15 @@
 
 #define N_MAX_CONN 10
 #define DPROMPT ">> "
+#define RCV_FNAME "image.jpg"
 #define MAX_PROMPT_SIZE 64
-#define min(i, j) (((i) < (j)) ? (i) : (j))
 
-void listen_setup(int *sockfd, struct sockaddr_in *serv_addr);
+void sock_setup(int *sockfd, struct sockaddr_in *serv_addr, int type, int port);
 void sv_cli(int sockfd, struct sockaddr_in *connect_addr,
 	    socklen_t connect_addr_len);
+
+int sv_update(int sockfd);
+int sv_gettel(int sockfd);
+int sv_scan(int sockfd);
 
 #endif // __SERVER_UTILS_H_
