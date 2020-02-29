@@ -1,0 +1,94 @@
+%%%%%%%%%%%%
+%% Please rename this main.tex file and the output PDF to
+%% [lastname_firstname_graduationyear]
+%% before submission.
+%%
+%% This .tex file is for use with BibLaTeX. Please use
+%% main-bibtex.tex instead if you prefer BibTeX.
+%%%%%%%%%%%%
+
+\documentclass[11pt]{unc_so2}
+\usepackage[hyphens]{url}
+\usepackage{lipsum}
+\usepackage{graphicx}
+
+\usepackage{todonotes}
+
+%% Tentative: newtx for better-looking Times
+
+
+% \usepackage[sfdefault]{noto}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+% \usepackage{newtxtext,newtxmath}
+
+% Must use biblatex to produce the Published Contents and Contributions, per-chapter bibliography (if desired), etc.
+\usepackage[
+    backend=biber,natbib,
+    % IMPORTANT: load a style suitable for your discipline
+    style=ieee
+]{biblatex}
+
+% Name of your .bib file(s)
+\addbibresource{example.bib}
+\addbibresource{ownpubs.bib}
+
+\newcommand\marktext[1]{%
+  \textcolor{cyan}{\llap{\smash{\endleft}}}%
+  \xblackout{#1}%
+  \textcolor{cyan}{\rlap{\smash{\endright}}}%
+}
+
+\begin{document}
+
+% Do remember to remove the square bracket!
+\title{Trabajo Práctico Nro I}
+\author{Ivan M. Vignolles}
+\unilogo{unc1_a.jpg}                                 % Institution logo
+\defenddate{11 de Abril de 2019}
+
+\maketitle[logo]
+
+%% Uncomment the `iknowhattodo' option to dismiss the instruction in the PDF.
+% \begin{publishedcontent}%[iknowwhattodo]
+% % List your publications and contributions here.
+% \nocite{Cahn:etal:2015,Cahn:etal:2016}
+% \end{publishedcontent}
+
+\nombrefecha
+\tableofcontents*
+\clearpage
+% \listoffigures
+% \listoftables
+% \printnomenclature
+
+\mainmatter
+
+\section{Introducción}
+\subsection{Propósito}
+\subsection{Ámbito del Sistema}
+\subsection{Definiciones, Acrónimos y Abreviaturas}
+\subsection{Referencias}
+\subsection{Descripción General del Documento}
+\section{Descripción General}
+\subsection{Perspectiva del Producto}
+\subsection{Funciones del Producto}
+\subsection{Características de los Usuarios}
+\subsection{Restricciones}
+\subsection{Suposiciones y Dependencias}
+\subsection{Requisitos Futuros}
+\section{Requisitos Específicos}
+\subsection{Interfaces Externas}
+\subsection{Funciones}
+\subsection{Requisitos de Rendimiento}
+\subsection{Restricciones de Diseño}
+\subsection{Atributos del Sistema}
+\section{Otros Requisitos}
+\section{Diseño de solución}
+\section{Implementación y Resultados}
+\section{Conclusiones}
+\section{Apéndices}
+
+\printbibliography[heading=subbibintoc]
+
+\end{document}
