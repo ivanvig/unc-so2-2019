@@ -32,7 +32,6 @@ void sv_cli(int sockfd, struct sockaddr_in *connect_addr,
 	    socklen_t connect_addr_len)
 {
 	struct telemetria tel;
-	uint8_t msg = SAT_GETTEL;
 	char prompt[MAX_PROMPT_SIZE];
 
 	char *line = NULL;
@@ -40,16 +39,12 @@ void sv_cli(int sockfd, struct sockaddr_in *connect_addr,
 	ssize_t nchr_read;
 	char *op;
 
-	if (write(sockfd, &msg, 1) != 1) {
-		perror("[!] ERROR: No se pudo pedir el ID del satelite\n");
+	printf("[*] Obteniendo ID del satelite\n");
+	if (sv_gettel(sockfd, &tel) < 0) {
+		printf("[!] Error al pedir el ID del satelite\n");
 		strncpy(tel.id, "UNKNOWN", sizeof(tel.id));
-	} else {
-		if (read(sockfd, &msg, 1) != 1 || msg != SAT_OK ||
-		    read(sockfd, &tel, sizeof(tel)) != sizeof(tel)) {
-			perror("[!] ERROR: No se pudo recibir el ID del satelite\n");
-			strncpy(tel.id, "UNKNOWN", sizeof(tel.id));
-		}
 	}
+	printf("[*] ID obtenido\n");
 
 	strncpy(prompt, tel.id, sizeof(prompt));
 	strncat(prompt, DPROMPT, MAX_PROMPT_SIZE - strlen(prompt) - 1);
@@ -72,7 +67,19 @@ void sv_cli(int sockfd, struct sockaddr_in *connect_addr,
 			sv_update(sockfd, updfd);
 			close(updfd);
 		} else if (!strcmp(op, "get")) {
-			sv_gettel(sockfd);
+			if (sv_gettel(sockfd, &tel) < 0) {
+				printf("[!] Error al obtener telemetria\n");
+				continue;
+			}
+			printf("\t ID: %s\n "
+			       "\t UPTIME [s]: %ld\n"
+			       "\t VERSION: %s\n"
+			       "\t CARGA DEL SISTEMA: %f\n"
+			       "\t RAM LIBRE [MiB]: %lu\n",
+			       tel.id, tel.uptime, tel.ver,
+			       tel.load / (float)(1 << SI_LOAD_SHIFT),
+			       tel.ram_usage);
+
 		} else if (!strcmp(op, "scan")) {
 			sv_scan(sockfd);
 		} else {
@@ -177,28 +184,32 @@ int sv_update(int sockfd, int updfd)
 	return 0;
 }
 
-int sv_gettel(int sockfd)
+int sv_gettel(int sockfd, struct telemetria *tel)
 {
 	uint8_t msg;
-	struct telemetria tel;
 	msg = SAT_GETTEL;
 	if (write(sockfd, &msg, 1) != 1) {
 		perror("[!] ERROR: Intente nuevamente\n");
 		return -1;
 	}
-	if (read(sockfd, &msg, 1) != 1 || msg != SAT_OK ||
-	    read(sockfd, &tel, sizeof(tel)) != sizeof(tel)) {
-		perror("[!] ERROR: No se pudo recibir la telemetria\n");
+	printf("[*] Esperando confirmacion\n");
+	if (read(sockfd, &msg, 1) != 1 || msg != SAT_OK) {
+		perror("[!] Error al recibir confirmacion del cliente\n");
 		return -2;
-	} else {
-		printf("\t ID: %s\n "
-		       "\t UPTIME [s]: %ld\n"
-		       "\t VERSION: %s\n"
-		       "\t CARGA DEL SISTEMA: %f\n"
-		       "\t RAM LIBRE [MiB]: %lu\n",
-		       tel.id, tel.uptime, tel.ver,
-		       tel.load / (float)(1 << SI_LOAD_SHIFT), tel.ram_usage);
 	}
+
+	printf("[*] Creando socket UDP\n");
+	int fsockfd;
+	struct sockaddr_in serv_addr;
+	sock_setup(&fsockfd, &serv_addr, SOCK_DGRAM, SV_UDPPORT);
+
+	printf("[*] Esperando telemetria\n");
+	if (recv(fsockfd, tel, sizeof(*tel), 0) != sizeof(*tel)) {
+		perror("[!] Error leyendo telemetria");
+		return -3;
+	}
+
+	close(fsockfd);
 	return 0;
 }
 

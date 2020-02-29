@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 	serv_addr.sin_port = htons(SV_PORT);
 
 	if (!inet_aton(SV_IP, &serv_addr.sin_addr)) {
-		perror("[!] ERROR: Problema con la IP del servidor.\n");
+		perror("[!] Error al configurar la IP del servidor");
 		exit(EXIT_FAILURE);
 	}
 
@@ -56,10 +56,35 @@ int main(int argc, char **argv)
 		case SAT_GETTEL:
 			printf("[*] Comando 'get' recibido\n");
 			if (!gettel(&tel)) {
-				printf("[*] Enviando telemetria\n");
+				printf("[*] Comenzando envio de telemetria\n");
 				msg = SAT_OK;
 				write(sockfd, &msg, 1);
-				write(sockfd, &tel, sizeof(tel));
+
+				int fsockfd;
+				struct sockaddr_in servaddr;
+
+				printf("[*] Creando socket UDP\n");
+				if ((fsockfd = socket(AF_INET, SOCK_DGRAM, 0)) <
+				    0) {
+					perror("Error al crear socket UDP");
+					exit(EXIT_FAILURE);
+				}
+
+				memset(&servaddr, 0, sizeof(servaddr));
+				servaddr.sin_family = AF_INET;
+				servaddr.sin_port = htons(SV_UDPPORT);
+
+				if (!inet_aton(SV_IP, &servaddr.sin_addr)) {
+					perror("[!] Error al configurar la IP del servidor");
+					exit(EXIT_FAILURE);
+				}
+				printf("[*] Enviando telemetria\n");
+				sendto(fsockfd, &tel, sizeof(tel), 0,
+				       (const struct sockaddr *)&servaddr,
+				       sizeof(servaddr));
+				shutdown(fsockfd, SHUT_WR);
+				/* recv(fsockfd, NULL, 0, 0); */
+				close(fsockfd);
 			} else {
 				perror("[!] Error obteniendo telemetria");
 				msg = SAT_ERR;
