@@ -76,7 +76,7 @@ void sv_cli(int sockfd, struct sockaddr_in *connect_addr,
 		} else if (!strcmp(op, "scan")) {
 			sv_scan(sockfd);
 		} else {
-			printf("[!] Error: Comando invalido");
+			printf("[!] Error: Comando invalido\n");
 			continue;
 		};
 	}

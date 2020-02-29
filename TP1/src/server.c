@@ -4,7 +4,7 @@
 #include <netinet/ip.h>
 #include <string.h>
 #include <unistd.h>
-#include <poll.h>
+#include <wait.h>
 
 #include "server_utils.h"
 #include "remote.h"
@@ -49,6 +49,7 @@ int main(int argc, char const *argv[])
 			exit(EXIT_FAILURE);
 		default:
 			close(connect_sockfd);
+			wait(0);
 			continue;
 		}
 	}
