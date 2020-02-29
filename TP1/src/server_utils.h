@@ -12,7 +12,7 @@ void sock_setup(int *sockfd, struct sockaddr_in *serv_addr, int type, int port);
 void sv_cli(int sockfd, struct sockaddr_in *connect_addr,
 	    socklen_t connect_addr_len);
 
-int sv_update(int sockfd);
+int sv_update(int sockfd, int updfd);
 int sv_gettel(int sockfd);
 int sv_scan(int sockfd);
 

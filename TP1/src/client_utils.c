@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
 
 #include "client_utils.h"
 #include "remote.h"
@@ -27,6 +28,61 @@ int gettel(struct telemetria *tel)
 	tel->ram_usage = (info.freeram * info.mem_unit) / (1 << 20);
 
 	strncpy(tel->ver, SOFT_VER, sizeof(tel->ver));
+
+	return 0;
+}
+
+int update(int sockfd)
+{
+	off_t updsize;
+	void *updbuf;
+	int updfd;
+	ssize_t leftbytes;
+	uint8_t *bufptr;
+
+	if (read(sockfd, &updsize, sizeof(updsize)) != sizeof(updsize)) {
+		perror("[!] Error al recibir tamaño de archivo");
+		return -1;
+	}
+
+	if ((updbuf = malloc(updsize)) == NULL) {
+		perror("[!] Error reservando memoria para update");
+		return -2;
+	}
+
+	if ((updfd = open(RCV_UPD_FNAME, O_WRONLY | O_CREAT | O_TRUNC,
+			  S_IRWXU)) < 0) {
+		perror("[!] Error al crear archivo");
+		free(updbuf);
+		return -3;
+	}
+
+	uint8_t msg = SAT_OK;
+	write(sockfd, &msg, 1);
+
+	leftbytes = updsize;
+	bufptr = updbuf;
+	while (leftbytes > 0) {
+		ssize_t recvbytes = recv(sockfd, bufptr, leftbytes, 0);
+		if (recvbytes < 0) {
+			perror("[!] Error recibiendo archivo");
+			free(updbuf);
+			return -4;
+		}
+		leftbytes -= recvbytes;
+		bufptr += recvbytes;
+	}
+	write(updfd, updbuf, updsize - leftbytes);
+	close(updfd);
+
+	printf("[*] Update recibido\n");
+
+	shutdown(sockfd, SHUT_RDWR);
+	close(sockfd);
+	if (execlp("./" UPD_SCRIPT, UPD_SCRIPT, (char *)NULL) < 0) {
+		perror("Error ejecutando nueva version");
+		exit(EXIT_FAILURE);
+	}
 
 	return 0;
 }
@@ -62,14 +118,6 @@ int send_scan(int sockfd, int imgfd)
 
 	printf("[*] Enviando archivo\n");
 
-	int bufsize = OPT_SOCK_BUF + 512;
-
-	if (setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &bufsize,
-		       sizeof(bufsize)) < 0) {
-		perror("[!] Error al configurar SO_SNDBUF");
-		return -7;
-	}
-
 	leftbytes = statbuf.st_size;
 	bufptr = (uint8_t *)imgbuf;
 	while (leftbytes > 0) {
@@ -79,7 +127,6 @@ int send_scan(int sockfd, int imgfd)
 			free(imgbuf);
 			return -5;
 		}
-		printf("[*] Enviados %ld bytes\n", sendbytes);
 		leftbytes -= sendbytes;
 		bufptr += sendbytes;
 	}

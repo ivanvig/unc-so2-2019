@@ -26,6 +26,12 @@ int main(int argc, char const *argv[])
 	printf("[*] Servidor listo a la escucha en puerto %d\n",
 	       ntohs(serv_addr.sin_port));
 
+	int bufsize = OPT_SOCK_BUF + 2048;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &bufsize,
+		       sizeof(bufsize)) < 0) {
+		perror("[!] Error al configurar SO_RCVBUF");
+		exit(EXIT_FAILURE);
+	}
 	while (1) {
 		connect_sockfd =
 			accept(sockfd, (struct sockaddr *)&connect_addr,

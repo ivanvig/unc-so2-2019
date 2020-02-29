@@ -5,6 +5,8 @@
 #include <sys/sysinfo.h>
 #include <fcntl.h>
 #include <time.h>
+#include <sys/stat.h>
+
 #include "server_utils.h"
 #include "remote.h"
 
@@ -66,26 +68,112 @@ void sv_cli(int sockfd, struct sockaddr_in *connect_addr,
 		op = strtok(line, " ");
 
 		if (!strcmp(op, "update")) {
-			sv_update(sockfd);
+			int updfd = open(strtok(NULL, " "), O_RDONLY);
+			sv_update(sockfd, updfd);
+			close(updfd);
 		} else if (!strcmp(op, "get")) {
 			sv_gettel(sockfd);
 		} else if (!strcmp(op, "scan")) {
 			sv_scan(sockfd);
 		} else {
-			perror("[!] ERROR: Comando invalido\n");
+			printf("[!] Error: Comando invalido");
 			continue;
 		};
 	}
 }
 
-int sv_update(int sockfd)
+int sv_update(int sockfd, int updfd)
 {
-	uint8_t msg;
-	msg = SAT_UPDATE;
-	if (write(sockfd, &msg, 1) != 1) {
-		perror("[!] ERROR: Intente nuevamente\n");
+	uint8_t msg = SAT_UPDATE;
+	struct stat statbuf;
+	void *updbuf;
+	int leftbytes;
+	uint8_t *bufptr;
+	struct timespec begin, end;
+
+	if (fstat(updfd, &statbuf)) {
+		perror("[!] Error obteniendo tamaño del archivo");
 		return -1;
 	}
+
+	if ((updbuf = malloc(statbuf.st_size)) == NULL) {
+		perror("[!] Error reservando memoria para archivo");
+		return -2;
+	}
+
+	printf("[*] Leyendo archivo\n");
+	if ((read(updfd, updbuf, statbuf.st_size)) != statbuf.st_size) {
+		perror("[!] Error leyendo archivo");
+		return -3;
+	}
+	printf("[*] Archivo leido\n");
+
+	if (write(sockfd, &msg, 1) != 1) {
+		perror("Error de comunicacion");
+		return -4;
+	}
+
+	printf("[*] Esperando confirmacion\n");
+	if (read(sockfd, &msg, 1) != 1 || msg != SAT_OK) {
+		printf("Un error ocurrio en el cliente\n");
+		return -5;
+	}
+
+	printf("[*] Enviando tamaño de archivo\n");
+	if (write(sockfd, &statbuf.st_size, sizeof(statbuf.st_size)) <
+	    sizeof(statbuf.st_size)) {
+		perror("[!] Error enviando tamaño de archivo");
+		free(updbuf);
+		return -9;
+	}
+
+	printf("[*] Enviando archivo\n");
+	leftbytes = statbuf.st_size;
+	bufptr = (uint8_t *)updbuf;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &begin);
+	while (leftbytes > 0) {
+		ssize_t sendbytes = send(sockfd, bufptr, leftbytes, 0);
+		if (sendbytes < 0) {
+			perror("[!] Error enviando archivo");
+			free(updbuf);
+			return -8;
+		}
+		leftbytes -= sendbytes;
+		bufptr += sendbytes;
+	}
+	clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+
+	double time = (end.tv_nsec - begin.tv_nsec) / 1000000000.0 +
+		      (end.tv_sec - begin.tv_sec);
+	double recvsize = (statbuf.st_size - leftbytes) / 1048576.0;
+	printf("[*] Enviados %.2f MBytes en %.2f segundos [%.2f MBytes/s]\n",
+	       recvsize, time, recvsize / time);
+
+	if (leftbytes != 0) {
+		printf("[!] Error al enviar el archivo\n");
+		free(updbuf);
+		return -6;
+	} else {
+		printf("[*] Archivo enviado\n");
+		free(updbuf);
+	}
+
+	printf("[*] Esperando confirmacion del cliente\n");
+	if (read(sockfd, &msg, 1) != 1 || msg != SAT_OK) {
+		printf("Un error ocurrio en el cliente\n");
+		return -7;
+	}
+	printf("[*] Cliente listo para actualizarse\n");
+	if (read(sockfd, &msg, 1) > 0) {
+		printf("El cliente no se ha actualizado con exito\n");
+		return -8;
+	} else {
+		printf("[*] Terminando conexion\n");
+		shutdown(sockfd, SHUT_RDWR);
+		close(sockfd);
+		exit(EXIT_SUCCESS);
+	}
+
 	return 0;
 }
 
@@ -147,14 +235,6 @@ int sv_scan(int sockfd)
 		perror("[!] Error al crear archivo");
 		free(imgbuf);
 		return -4;
-	}
-
-	int bufsize = OPT_SOCK_BUF + 2048;
-
-	if (setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &bufsize,
-		       sizeof(bufsize)) < 0) {
-		perror("[!] Error al configurar SO_RCVBUF");
-		return -7;
 	}
 
 	leftbytes = imgsize;

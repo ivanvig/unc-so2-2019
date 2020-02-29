@@ -30,6 +30,13 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
+	int bufsize = OPT_SOCK_BUF + 512;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &bufsize,
+		       sizeof(bufsize)) < 0) {
+		perror("[!] Error al configurar SO_SNDBUF");
+		exit(EXIT_FAILURE);
+	}
+
 	printf("[*] Conectando al servidor %s en puerto %d\n", SV_IP, SV_PORT);
 	if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) <
 	    0) {
@@ -71,6 +78,16 @@ int main(int argc, char **argv)
 				write(sockfd, &msg, 1);
 				send_scan(sockfd, fd);
 				close(fd);
+			}
+			break;
+		case SAT_UPDATE:
+			printf("[*] Comando 'update' recibido\n");
+			msg = SAT_OK;
+			write(sockfd, &msg, 1);
+			if (update(sockfd) < 0) {
+				printf("[!] Error al actualizar");
+				msg = SAT_ERR;
+				write(sockfd, &msg, 1);
 			}
 			break;
 		default:
