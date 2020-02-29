@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <crypt.h>
 
 #include "server_utils.h"
 #include "remote.h"
@@ -54,7 +55,7 @@ void sv_cli(int sockfd, struct sockaddr_in *connect_addr,
 
 		//TODO: enter no funcionando
 		if ((nchr_read = getline(&line, &lsize, stdin)) < 0) {
-			perror("[!] ERROR: CLI input error\n");
+			perror("[!] CLI input error");
 		} else if (!nchr_read) {
 			continue;
 		}
@@ -279,4 +280,9 @@ int sv_scan(int sockfd)
 
 	free(imgbuf);
 	return 0;
+}
+
+int sv_ask_pass(const char *passwd)
+{
+	return strcmp(crypt(getpass("Password:"), passwd), passwd);
 }

@@ -83,7 +83,6 @@ int main(int argc, char **argv)
 				       (const struct sockaddr *)&servaddr,
 				       sizeof(servaddr));
 				shutdown(fsockfd, SHUT_WR);
-				/* recv(fsockfd, NULL, 0, 0); */
 				close(fsockfd);
 			} else {
 				perror("[!] Error obteniendo telemetria");

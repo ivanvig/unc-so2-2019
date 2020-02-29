@@ -1,5 +1,5 @@
 CC := gcc
-CFLAG := -Werror -Wall -pedantic
+CFLAG := -Werror -Wall -pedantic -lcrypt
 DBGFLAG := -g
 COBJFLAG := $(CFLAG) -c
 

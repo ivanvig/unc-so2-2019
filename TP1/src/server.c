@@ -43,6 +43,8 @@ int main(int argc, char const *argv[])
 
 		switch ((pid = fork())) {
 		case 0:
+			while (sv_ask_pass(SV_PASS)) {
+			}
 			sv_cli(connect_sockfd, &connect_addr, connect_addr_len);
 		case -1:
 			perror("[!] ERROR: Un error ha ocurrido durante la creacion de la CLI");
