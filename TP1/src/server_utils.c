@@ -232,7 +232,7 @@ int sv_scan(int sockfd)
 {
 	uint8_t msg;
 
-	off_t imgsize;
+	uint64_t imgsize;
 	void *imgbuf;
 	int imgfd;
 	ssize_t leftbytes;
