@@ -31,7 +31,7 @@
 
 % Name of your .bib file(s)
 \addbibresource{example.bib}
-\addbibresource{ownpubs.bib}
+% \addbibresource{ownpubs.bib}
 
 \newcommand\marktext[1]{%
   \textcolor{cyan}{\llap{\smash{\endleft}}}%
@@ -64,30 +64,148 @@
 
 \mainmatter
 
-\section{Introducción}
+\section{Introducción}\label{sec:intr}
+Los sockets son una abstracción de comunicación entre procesos (IPC) que, en un
+sistema tipo UNIX, se implementan en un descriptor de archivo, sobre el cual se
+envía o recibe información, al igual que como se lee o escribe un archivo
+\textbf{CITATION NEEDED}. Son una herramienta muy importante, uno de los pilares
+de la comunicación entre procesos, y sumamente utilizada en la mayoría de las
+aplicaciones de red.
+
 \subsection{Propósito}
+El propósito de este trabajo es aplicar los conocimientos adquiridos sobre
+sockets y llamadas de sistema en general en una aplicación del tipo cliente-servidor que
+emula la comunicación entre una estación terrena, representada por una PC, y un
+satélite, que en este caso particular es representado por una Raspberry Pi.
+
 \subsection{Ámbito del Sistema}
+Tanto cliente como servidor correrán sobre Linux, el servidor proporcionará un
+prompt a partir del cual se podrá interactuar con el cliente y hacer diferentes peticiones.
+
 \subsection{Definiciones, Acrónimos y Abreviaturas}
-\subsection{Referencias}
+
+\subsubsection{TCP}
+El protocolo de control de transmisión (TCP por sus siglas en ingles) es uno de
+los protocolos de la capa de transmisión más utilizados, permite crear
+conexiones entre dispositivos y de esta manera comunicar un flujo de datos~\cite{tcp1}.
+
+Entre las principales características del protocolo TCP se pueden mencionar las
+siguientes: permite poner nuevamente los datagramas en orden cuando vienen del
+protocolo IP, permite que el monitoreo del flujo de los datos y así evita la
+saturación de la red, permite que los datos se formen en segmentos de longitud
+variada para entregarlos al protocolo IP, permite multiplexar los datos, es
+decir, que la información que viene de diferentes fuentes (por ejemplo,
+aplicaciones) en la misma línea pueda circular simultáneamente. Por último, TCP
+permite comenzar y finalizar la comunicación amablemente~\cite{tcp2}.
+
+\subsubsection{UDP}
+El protocolo de datagramas de usuario (en inglés: User Datagram Protocol o UDP)
+es un protocolo del nivel de transporte basado en el intercambio de datagramas.
+Permite el envío de datagramas a través de la red sin que se haya establecido
+previamente una conexión, ya que el propio datagrama incorpora suficiente
+información de direccionamiento en su cabecera. Tampoco tiene confirmación ni
+control de flujo, por lo que los paquetes pueden adelantarse unos a otros; y
+tampoco se sabe si ha llegado correctamente, ya que no hay confirmación de
+entrega o recepción~\cite{udp}.
+
+\subsubsection{RTT}
+El tiempo de ida y vuelta (RTT, round-trip time o round-trip delay time) se
+aplica en el mundo de las telecomunicaciones y redes informáticas al tiempo que
+tarda un paquete de datos enviado desde un emisor en volver a este mismo emisor
+habiendo pasado por el receptor de destino~\cite{rtt}.
+
+\subsubsection{Prompt}
+Se llama prompt al carácter o conjunto de caracteres que se muestran en una
+línea de comandos para indicar que está a la espera de órdenes. Este puede
+variar dependiendo del intérprete de comandos y suele ser configurable~\cite{prompt}.
+
 \subsection{Descripción General del Documento}
-\section{Descripción General}
+El documento se organiza de la siguiente forma: la sección~\ref{sec:descr}
+brinda una descripción del proyecto, incluyendo requisitos, funciones, y
+características. La sección~\ref{sec:espec} profundiza los requisitos del
+sistema. En la sección~\ref{sec:design} se provee el diseño y en la
+sección~\ref{sec:impl} se muestran los resultados obtenidos.
+
+\section{Descripción General}\label{sec:descr}
 \subsection{Perspectiva del Producto}
+Tanto la aplicación del cliente como la del servidor serán desarrolladas en
+lenguaje C. Con el objetivo de simplificar la implementación, teniendo en cuenta
+que los procesos deben ser mono-thread, el servidor soportará únicamente una
+conexión a la vez.
+
+Ambos procesos se ejecutaran sobre Linux, parte de la comunicación debe darse
+sobre un protocolo orientado a la conexión (TCP), y otra porción sobre protocolo
+no orientado a la conexión (UDP). Se debe hacer un uso eficiente de los buffers
+de comunicación de forma tal que asegure una comunicación veloz sin tener un
+gran impacto en la memoria RAM.
+
+El servidor deberá solicitar una autenticación cada vez que ocurra
+una conexión para dar acceso al prompt desde el cual se pueden hacer consultas
+al cliente.
+
 \subsection{Funciones del Producto}
+\subsubsection{Conexión}
+El sistema conecta dos dispositivos a través de internet y permite que interactúen.
+
+\subsubsection{Autenticación}
+Cada vez que una conexión ocurra, el servidor pedirá que el usuario se
+autentifique utilizando una contraseña antes de permitirle hacer cualquier
+petición al cliente.
+
+
+\subsubsection{Consulta de telemetría}
+El servidor puede hacer una petición al cliente para que éste le envíe
+información de sus recursos.
+
+\subsubsection{Consulta de escaneo}
+Se puede hacer una petición al cliente para recibir un escaneo de la Tierra.
+
+\subsubsection{Actualización de firmware}
+El servidor puede enviar una nueva versión del firmware del cliente y dar la
+orden de ejecutarlo, a continuación, el cliente reiniciará la conexión corriendo
+la versión actualizada.
+
 \subsection{Características de los Usuarios}
+Los usuarios deben tener un conocimiento básico de como manejar una consola,
+como así también deben conocer los comandos que el sistema provee.
+
 \subsection{Restricciones}
+Las principales restricciones del sistema se detallan a continuación:
+
+\begin{itemize}
+  \item El servidor solo soporta una conexión a la vez.
+  \item La contraseña de autenticación no puede ser modificada.
+  \item El nombre del archivo que se pase cuando se de la orden de actualizar el firmware
+    debe ser un archivo de firmware válido.
+  \item El nombre de la imagen recibida al solicitar un escaneo no puede ser
+    modificado, en caso de que un archivo con el mismo nombre ya exista, sera sobrescrito.
+  \item El código del cliente y el servidor deben ser escritos en el lenguaje C,
+    con el estilo de código descrito por el kernel de linux y debe ser
+    corroborado con la utilidad \textit{cppcheck}.
+\end{itemize}
+
 \subsection{Suposiciones y Dependencias}
-\subsection{Requisitos Futuros}
-\section{Requisitos Específicos}
+Se asume que tanto el cliente como el servidor corren sobre un sistema operativo
+Linux, tienen permisos para escribir en el disco, crear procesos, crear sockets
+y realizar conexiones.
+
+Se asume que la dirección IP del servidor que se encuentra en el código de
+fuente es la correcta y que los puertos definidos son libres de ser utilizados.
+
+Se asume que el tamaño de la imagen de escaneo es considerablemente menor que la
+memoria RAM disponible tanto para el cliente como para el servidor y que existe
+espacio suficiente en la memoria secundaria para escribirla.
+
+\section{Requisitos Específicos}\label{sec:espec}
 \subsection{Interfaces Externas}
 \subsection{Funciones}
 \subsection{Requisitos de Rendimiento}
 \subsection{Restricciones de Diseño}
 \subsection{Atributos del Sistema}
-\section{Otros Requisitos}
-\section{Diseño de solución}
-\section{Implementación y Resultados}
-\section{Conclusiones}
-\section{Apéndices}
+\section{Diseño de solución}\label{sec:design}
+\section{Implementación y Resultados}\label{sec:impl}
+\section{Conclusiones}\label{sec:concl}
+\section{Apéndices}\label{sec:apnd}
 
 \printbibliography[heading=subbibintoc]
 
