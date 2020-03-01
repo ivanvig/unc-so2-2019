@@ -8,16 +8,8 @@ int safe_send(int sockfd, const void *bufptr, size_t bufsize, int flags)
 	size_t leftbytes = bufsize;
 	uint8_t *current_bufptr = (uint8_t *)bufptr;
 	while (leftbytes > 0) {
-		/* ssize_t sendbytes = */
-		/* 	send(sockfd, current_bufptr, leftbytes, flags); */
-		/* if (sendbytes < 0) { */
-		/* 	perror("[!] Error al enviar"); */
-		/* 	return -1; */
-		/* } */
-		/* leftbytes -= sendbytes; */
-		/* current_bufptr += sendbytes; */
 		ssize_t sendbytes =
-			send(sockfd, current_bufptr, MSS, flags);
+			send(sockfd, current_bufptr, leftbytes, flags);
 		if (sendbytes < 0) {
 			perror("[!] Error al enviar");
 			return -1;
