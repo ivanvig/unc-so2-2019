@@ -82,31 +82,33 @@ int send_scan(int sockfd, int imgfd)
 {
 	struct stat statbuf;
 	void *imgbuf;
+  uint64_t imgsize;
 
 	if (fstat(imgfd, &statbuf)) {
 		perror("[!] Error obteniendo tamaño del archivo");
 		return -1;
 	}
+  imgsize = statbuf.st_size;
 
-	if ((imgbuf = malloc(statbuf.st_size)) == NULL) {
+	if ((imgbuf = malloc(imgsize)) == NULL) {
 		perror("[!] Error reservando memoria para archivo");
 		return -2;
 	}
 	printf("[*] Leyendo archivo\n");
-	if ((read(imgfd, imgbuf, statbuf.st_size)) != statbuf.st_size) {
+	if ((read(imgfd, imgbuf, imgsize)) != imgsize) {
 		perror("[!] Error leyendo archivo");
 		return -3;
 	}
 
-	if (write(sockfd, &statbuf.st_size, sizeof(statbuf.st_size)) <
-	    sizeof(statbuf.st_size)) {
+	if (write(sockfd, &imgsize, sizeof(imgsize)) <
+	    sizeof(imgsize)) {
 		perror("[!] Error enviando tamaño de archivo");
 		free(imgbuf);
 		return -4;
 	}
 
 	printf("[*] Enviando archivo\n");
-	if (safe_send(sockfd, imgbuf, statbuf.st_size, 0) < 0) {
+	if (safe_send(sockfd, imgbuf, imgsize, 0) < 0) {
 		printf("[!] Error enviando archivo\n");
 		free(imgbuf);
 		return -5;
