@@ -1,6 +1,7 @@
 #ifndef __REMOTE_H_
 #define __REMOTE_H_
 
+#include <stdint.h>
 #define MAX_NAME_SIZE 32
 #define VER_BUF_SIZE 8
 
@@ -29,10 +30,10 @@
 
 struct telemetria {
 	char id[MAX_NAME_SIZE];
-	long uptime;
+	int64_t uptime;
 	char ver[VER_BUF_SIZE];
-	unsigned long load;
-	unsigned long ram_usage;
+	uint64_t load;
+	uint64_t ram_usage;
 };
 
 #endif // __REMOTE_H_
