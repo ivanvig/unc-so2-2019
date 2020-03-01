@@ -34,11 +34,11 @@ int gettel(struct telemetria *tel)
 
 int update(int sockfd)
 {
-	off_t updsize;
+	uint64_t updsize;
 	void *updbuf;
 	int updfd;
 
-	if (read(sockfd, &updsize, sizeof(updsize)) != sizeof(updsize)) {
+	if (safe_recv(sockfd, &updsize, sizeof(updsize), 0) < 0) {
 		perror("[!] Error al recibir tamaño de archivo");
 		return -1;
 	}
