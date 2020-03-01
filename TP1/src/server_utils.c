@@ -13,8 +13,8 @@
 
 void sock_setup(int *sockfd, struct sockaddr_in *serv_addr, int type, int port)
 {
-	if (!(*sockfd = socket(AF_INET, type, 0))) {
-		perror("[!] ERROR: El socket no pudo ser creado.\n");
+	if ((*sockfd = socket(AF_INET, type, 0)) < 0) {
+		perror("[!] ERROR: El socket no pudo ser creado");
 		exit(EXIT_FAILURE);
 	}
 
@@ -23,8 +23,8 @@ void sock_setup(int *sockfd, struct sockaddr_in *serv_addr, int type, int port)
 	serv_addr->sin_addr.s_addr = INADDR_ANY;
 	serv_addr->sin_port = htons(port);
 
-	if (bind(*sockfd, (struct sockaddr *)serv_addr, sizeof(*serv_addr))) {
-		perror("[!] ERROR: No se pudo hacer el bind del socket\n");
+	if (bind(*sockfd, (struct sockaddr *)serv_addr, sizeof(*serv_addr)) < 0) {
+		perror("[!] ERROR: No se pudo hacer el bind del socket");
 		exit(EXIT_FAILURE);
 	}
 }
@@ -44,8 +44,9 @@ void sv_cli(int sockfd, struct sockaddr_in *connect_addr,
 	if (sv_gettel(sockfd, &tel) < 0) {
 		printf("[!] Error al pedir el ID del satelite\n");
 		strncpy(tel.id, "UNKNOWN", sizeof(tel.id));
-	}
-	printf("[*] ID obtenido\n");
+	}else{
+		printf("[*] ID obtenido\n");
+  }
 
 	strncpy(prompt, tel.id, sizeof(prompt));
 	strncat(prompt, DPROMPT, MAX_PROMPT_SIZE - strlen(prompt) - 1);
@@ -188,25 +189,30 @@ int sv_update(int sockfd, int updfd)
 int sv_gettel(int sockfd, struct telemetria *tel)
 {
 	uint8_t msg;
-	msg = SAT_GETTEL;
-	if (write(sockfd, &msg, 1) != 1) {
-		perror("[!] ERROR: Intente nuevamente\n");
-		return -1;
-	}
-	printf("[*] Esperando confirmacion\n");
-	if (read(sockfd, &msg, 1) != 1 || msg != SAT_OK) {
-		perror("[!] Error al recibir confirmacion del cliente\n");
-		return -2;
-	}
 
 	printf("[*] Creando socket UDP\n");
 	int fsockfd;
 	struct sockaddr_in serv_addr;
 	sock_setup(&fsockfd, &serv_addr, SOCK_DGRAM, SV_UDPPORT);
 
+	msg = SAT_GETTEL;
+	if (write(sockfd, &msg, 1) != 1) {
+		perror("[!] Error al enviar consulta al cliente");
+		close(fsockfd);
+		return -1;
+	}
+
+	printf("[*] Esperando confirmacion\n");
+	if (read(sockfd, &msg, 1) != 1 || msg != SAT_OK) {
+		perror("[!] Error al recibir confirmacion del cliente");
+		close(fsockfd);
+		return -2;
+	}
+
 	printf("[*] Esperando telemetria\n");
 	if (recv(fsockfd, tel, sizeof(*tel), 0) != sizeof(*tel)) {
 		perror("[!] Error leyendo telemetria");
+		close(fsockfd);
 		return -3;
 	}
 

@@ -17,7 +17,7 @@ int main(int argc, char **argv)
 	struct sockaddr_in serv_addr;
 
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("[!] ERROR: No se pudo crear socket\n");
+		perror("[!] ERROR: No se pudo crear socket");
 		exit(EXIT_FAILURE);
 	}
 
@@ -40,7 +40,7 @@ int main(int argc, char **argv)
 	printf("[*] Conectando al servidor %s en puerto %d\n", SV_IP, SV_PORT);
 	if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) <
 	    0) {
-		perror("[!] ERROR: No se pudo establecer la conexion.\n");
+		perror("[!] ERROR: No se pudo establecer la conexion");
 		exit(EXIT_FAILURE);
 	}
 

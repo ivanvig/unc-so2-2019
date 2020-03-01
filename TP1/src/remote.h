@@ -24,7 +24,7 @@
 
 #define SV_PORT 6020
 #define SV_UDPPORT 6021
-#define SV_IP "192.168.0.10"
+#define SV_IP "192.168.0.100"
 /* #define SV_IP "192.168.2.107" */
 
 struct telemetria {
