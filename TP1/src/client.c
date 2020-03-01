@@ -30,7 +30,7 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	int bufsize = OPT_SOCK_BUF + 512;
+	int bufsize = OPT_SOCK_BUF + 3000;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &bufsize,
 		       sizeof(bufsize)) < 0) {
 		perror("[!] Error al configurar SO_SNDBUF");
