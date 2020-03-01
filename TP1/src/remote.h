@@ -17,8 +17,9 @@
 #define CONN_BW 100 // Mbits/s
 /* #define CONN_RTT 20 // ms */
 #define CONN_RTT 1 // ms
+#define BUF_SCALE 2 //depende de tcp_adv_win_scale
 #define BWD_PROD (1000 * CONN_BW * CONN_RTT / 8)
-#define OPT_SOCK_BUF (4 * BWD_PROD / (3 * 2))
+#define OPT_SOCK_BUF (BUF_SCALE * BWD_PROD / 2)
 
 #define TCP_HDR 20
 #define IP_HDR 20
