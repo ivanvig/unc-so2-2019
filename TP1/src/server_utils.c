@@ -210,10 +210,19 @@ int sv_gettel(int sockfd, struct telemetria *tel)
 	}
 
 	printf("[*] Esperando telemetria\n");
-	if (recv(fsockfd, tel, sizeof(*tel), 0) != sizeof(*tel)) {
-		perror("[!] Error leyendo telemetria");
-		close(fsockfd);
-		return -3;
+
+	size_t leftbytes = sizeof(*tel);
+	uint8_t *bufptr = (uint8_t *)tel;
+	while (leftbytes > 0) {
+		ssize_t recvbytes = recv(fsockfd, bufptr, leftbytes, 0);
+		if (recvbytes < 0) {
+			perror("[!] Error recibiendo telemetria");
+			close(fsockfd);
+			return -3;
+		}
+		printf("Recibidos %ld bytes\n", recvbytes);
+		leftbytes -= recvbytes;
+		bufptr += recvbytes;
 	}
 
 	close(fsockfd);

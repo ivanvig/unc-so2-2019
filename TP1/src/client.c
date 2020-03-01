@@ -79,9 +79,21 @@ int main(int argc, char **argv)
 					exit(EXIT_FAILURE);
 				}
 				printf("[*] Enviando telemetria\n");
-				sendto(fsockfd, &tel, sizeof(tel), 0,
-				       (const struct sockaddr *)&servaddr,
-				       sizeof(servaddr));
+
+				size_t leftbytes = sizeof(tel);
+				uint8_t *bufptr = (uint8_t *)&tel;
+				while (leftbytes > 0) {
+					ssize_t sentbytes = sendto(fsockfd, &tel, sizeof(tel), 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+					if (sentbytes < 0) {
+						perror("[!] Error enviando telemetria");
+						close(fsockfd);
+            continue;
+					}
+          printf("Enviados %ld bytes\n", sentbytes);
+					leftbytes -= sentbytes;
+					bufptr += sentbytes;
+				}
+
 				shutdown(fsockfd, SHUT_WR);
 				close(fsockfd);
 			} else {

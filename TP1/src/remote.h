@@ -13,7 +13,7 @@
 
 #define CONN_BW 100 // Mbits/s
 /* #define CONN_RTT 20 // ms */
-#define CONN_RTT 10 // ms
+#define CONN_RTT 1 // ms
 #define BWD_PROD (1000 * CONN_BW * CONN_RTT / 8)
 #define OPT_SOCK_BUF (4 * BWD_PROD / (3 * 2))
 
