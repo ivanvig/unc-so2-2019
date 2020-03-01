@@ -220,7 +220,6 @@ int sv_gettel(int sockfd, struct telemetria *tel)
 			close(fsockfd);
 			return -3;
 		}
-		printf("Recibidos %ld bytes\n", recvbytes);
 		leftbytes -= recvbytes;
 		bufptr += recvbytes;
 	}

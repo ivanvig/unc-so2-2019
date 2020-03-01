@@ -89,7 +89,6 @@ int main(int argc, char **argv)
 						close(fsockfd);
             continue;
 					}
-          printf("Enviados %ld bytes\n", sentbytes);
 					leftbytes -= sentbytes;
 					bufptr += sentbytes;
 				}
