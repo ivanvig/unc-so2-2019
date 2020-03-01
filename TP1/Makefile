@@ -20,7 +20,7 @@ CLEAN_LIST := $(OBJ_PATH) \
 # default rule
 default: all
 
-$(BIN_PATH)/%: $(OBJ_PATH)/%.o $(OBJ_PATH)/%_utils.o
+$(BIN_PATH)/%: $(OBJ_PATH)/%.o $(OBJ_PATH)/%_utils.o $(OBJ_PATH)/remote.o
 	$(CC) $(CFLAG) -o $@ $?
 
 $(OBJ_PATH)/%.o: $(SRC_PATH)/%.c

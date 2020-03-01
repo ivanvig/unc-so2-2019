@@ -96,8 +96,6 @@ int sv_update(int sockfd, int updfd)
 	uint8_t msg = SAT_UPDATE;
 	struct stat statbuf;
 	void *updbuf;
-	int leftbytes;
-	uint8_t *bufptr;
 	struct timespec begin, end;
 
 	if (fstat(updfd, &statbuf)) {
@@ -137,35 +135,22 @@ int sv_update(int sockfd, int updfd)
 	}
 
 	printf("[*] Enviando archivo\n");
-	leftbytes = statbuf.st_size;
-	bufptr = (uint8_t *)updbuf;
 	clock_gettime(CLOCK_MONOTONIC_RAW, &begin);
-	while (leftbytes > 0) {
-		ssize_t sendbytes = send(sockfd, bufptr, leftbytes, 0);
-		if (sendbytes < 0) {
-			perror("[!] Error enviando archivo");
-			free(updbuf);
-			return -8;
-		}
-		leftbytes -= sendbytes;
-		bufptr += sendbytes;
-	}
+	if (safe_send(sockfd, updbuf, statbuf.st_size, 0) < 0){
+		perror("[!] Error enviando archivo");
+		free(updbuf);
+		return -8;
+  }
 	clock_gettime(CLOCK_MONOTONIC_RAW, &end);
 
 	double time = (end.tv_nsec - begin.tv_nsec) / 1000000000.0 +
 		      (end.tv_sec - begin.tv_sec);
-	double recvsize = (statbuf.st_size - leftbytes) / 1048576.0;
+	double recvsize = (statbuf.st_size) / 1048576.0;
 	printf("[*] Enviados %.2f MBytes en %.2f segundos [%.2f MBytes/s]\n",
 	       recvsize, time, recvsize / time);
 
-	if (leftbytes != 0) {
-		printf("[!] Error al enviar el archivo\n");
-		free(updbuf);
-		return -6;
-	} else {
-		printf("[*] Archivo enviado\n");
-		free(updbuf);
-	}
+  printf("[*] Archivo enviado\n");
+  free(updbuf);
 
 	printf("[*] Esperando confirmacion del cliente\n");
 	if (read(sockfd, &msg, 1) != 1 || msg != SAT_OK) {
@@ -210,19 +195,11 @@ int sv_gettel(int sockfd, struct telemetria *tel)
 	}
 
 	printf("[*] Esperando telemetria\n");
-
-	size_t leftbytes = sizeof(*tel);
-	uint8_t *bufptr = (uint8_t *)tel;
-	while (leftbytes > 0) {
-		ssize_t recvbytes = recv(fsockfd, bufptr, leftbytes, 0);
-		if (recvbytes < 0) {
-			perror("[!] Error recibiendo telemetria");
-			close(fsockfd);
-			return -3;
-		}
-		leftbytes -= recvbytes;
-		bufptr += recvbytes;
-	}
+	if (safe_recv(fsockfd, tel, sizeof(*tel), 0) < 0) {
+		printf("[!] Error recibiendo telemetria\n");
+		close(fsockfd);
+		return -3;
+  }
 
 	close(fsockfd);
 	return 0;
@@ -235,8 +212,6 @@ int sv_scan(int sockfd)
 	uint64_t imgsize;
 	void *imgbuf;
 	int imgfd;
-	ssize_t leftbytes;
-	uint8_t *bufptr;
 	struct timespec begin, end;
 
 	msg = SAT_SCAN;
@@ -263,34 +238,22 @@ int sv_scan(int sockfd)
 		return -4;
 	}
 
-	leftbytes = imgsize;
-	bufptr = imgbuf;
 	clock_gettime(CLOCK_MONOTONIC_RAW, &begin);
-	while (leftbytes > 0) {
-		ssize_t recvbytes = recv(sockfd, bufptr, leftbytes, 0);
-		if (recvbytes < 0) {
-			perror("[!] Error recibiendo archivo");
-			free(imgbuf);
-			return -5;
-		}
-		leftbytes -= recvbytes;
-		bufptr += recvbytes;
+	if (safe_recv(sockfd, imgbuf, imgsize, 0) < 0) {
+		printf("[!] Error recibiendo archivo\n");
+		free(imgbuf);
+		return -5;
 	}
 	clock_gettime(CLOCK_MONOTONIC_RAW, &end);
-	write(imgfd, imgbuf, imgsize - leftbytes);
+
+	write(imgfd, imgbuf, imgsize);
 	close(imgfd);
 
 	double time = (end.tv_nsec - begin.tv_nsec) / 1000000000.0 +
 		      (end.tv_sec - begin.tv_sec);
-	double recvsize = (imgsize - leftbytes) / 1048576.0;
+	double recvsize = (imgsize) / 1048576.0;
 	printf("[*] Recibidos %.2f MBytes en %.2f segundos [%.2f MBytes/s]\n",
 	       recvsize, time, recvsize / time);
-
-	if (leftbytes != 0) {
-		perror("[!] Error al leer la imagen");
-		free(imgbuf);
-		return -6;
-	}
 
 	free(imgbuf);
 	return 0;

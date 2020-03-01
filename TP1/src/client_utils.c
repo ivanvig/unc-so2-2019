@@ -37,8 +37,6 @@ int update(int sockfd)
 	off_t updsize;
 	void *updbuf;
 	int updfd;
-	ssize_t leftbytes;
-	uint8_t *bufptr;
 
 	if (read(sockfd, &updsize, sizeof(updsize)) != sizeof(updsize)) {
 		perror("[!] Error al recibir tamaño de archivo");
@@ -60,19 +58,12 @@ int update(int sockfd)
 	uint8_t msg = SAT_OK;
 	write(sockfd, &msg, 1);
 
-	leftbytes = updsize;
-	bufptr = updbuf;
-	while (leftbytes > 0) {
-		ssize_t recvbytes = recv(sockfd, bufptr, leftbytes, 0);
-		if (recvbytes < 0) {
-			perror("[!] Error recibiendo archivo");
-			free(updbuf);
-			return -4;
-		}
-		leftbytes -= recvbytes;
-		bufptr += recvbytes;
-	}
-	write(updfd, updbuf, updsize - leftbytes);
+	if (safe_recv(sockfd, updbuf, updsize, 0) < 0) {
+		perror("[!] Error recibiendo archivo");
+		free(updbuf);
+		return -4;
+  }
+	write(updfd, updbuf, updsize);
 	close(updfd);
 
 	printf("[*] Update recibido\n");
@@ -91,8 +82,6 @@ int send_scan(int sockfd, int imgfd)
 {
 	struct stat statbuf;
 	void *imgbuf;
-	int leftbytes;
-	uint8_t *bufptr;
 
 	if (fstat(imgfd, &statbuf)) {
 		perror("[!] Error obteniendo tamaño del archivo");
@@ -117,27 +106,13 @@ int send_scan(int sockfd, int imgfd)
 	}
 
 	printf("[*] Enviando archivo\n");
-
-	leftbytes = statbuf.st_size;
-	bufptr = (uint8_t *)imgbuf;
-	while (leftbytes > 0) {
-		ssize_t sendbytes = send(sockfd, bufptr, leftbytes, 0);
-		if (sendbytes < 0) {
-			perror("[!] Error enviando archivo");
-			free(imgbuf);
-			return -5;
-		}
-		leftbytes -= sendbytes;
-		bufptr += sendbytes;
-	}
-
-	if (leftbytes != 0) {
-		printf("[!] ERROR: Error al enviar la imagen\n");
+	if (safe_send(sockfd, imgbuf, statbuf.st_size, 0) < 0) {
+		printf("[!] Error enviando archivo\n");
 		free(imgbuf);
-		return -6;
-	} else {
-		printf("[*] Archivo enviado\n");
-		free(imgbuf);
-		return 0;
-	}
+		return -5;
+  }
+
+  printf("[*] Archivo enviado\n");
+  free(imgbuf);
+  return 0;
 }

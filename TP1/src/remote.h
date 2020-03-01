@@ -2,6 +2,8 @@
 #define __REMOTE_H_
 
 #include <stdint.h>
+#include <stddef.h>
+
 #define MAX_NAME_SIZE 32
 #define VER_BUF_SIZE 8
 
@@ -35,5 +37,8 @@ struct telemetria {
 	uint64_t load;
 	uint64_t ram_usage;
 };
+
+int safe_send(int sockfd, const void *bufptr, size_t bufsize, int flags);
+int safe_recv(int sockfd, const void *bufptr, size_t bufsize, int flags);
 
 #endif // __REMOTE_H_
