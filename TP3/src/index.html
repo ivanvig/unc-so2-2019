@@ -10,6 +10,28 @@
     		return (Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(date.getFullYear(), 0, 0)) / 24 / 60 / 60 / 1000;
 	}
 	$(document).ready(function() {
+		$("#lsmod").click(function(){
+			$.getJSON("cgi-bin/lsmod.cgi", function(json) {
+				$("#mods").append(function(){
+					var $table = $('<table />');
+					$table.append('<tr><th>Module</th><th>Size</th><th>Used by</th></tr>');
+    					$.each(json, function(i, item){
+    					    var $tr = $('<tr />');
+    					    $tr.appendTo($table);
+    					    $tr.append('<td>'+ item.mod + '</td>');
+    					    $tr.append('<td>'+ item.size + '</td>');
+    					    $tr.append('<td>'+ item.used + '</td>');
+    					});
+				    	return $table;
+				});
+			});
+			$("#data").hide();
+			$("#aws").hide();
+			$("#mods").show();
+
+
+		});
+
 		$("#button").click(function(){
 			$("#button").val("Procesando");
 			var hora = parseInt($("#timefield").val(), 10);
@@ -34,8 +56,10 @@
 				    	return $table;
 				});
 			});
+			$("#mods").hide();
 			$("#data").hide();
 			$("#aws").show();
+
 
 		});
 
@@ -62,6 +86,7 @@
 	        	});
 			$("#data").show();
 			$("#aws").hide();
+			$("#mods").hide();
 		});
 	    });
 </script>
@@ -73,7 +98,9 @@
 <h1><img src="images/spinningearth.gif" />Trabajo Practico N3<img src="images/spinningearth.gif" /></h1>
 <MARQUEE WIDTH=400px BEHAVIOR=SCROLL BGColor=yellow LOOP=100>Trabajo Practico N3: Sistemas Embebidos - Sistemas Operativos II - FCEFyN - UNC</MARQUEE>
 <p>Pruebe alguna de las siguientes opciones:
-<img src="images/hot.gif" /><a id="sysres" href="#data">Recursos del sistema</a> <img src="images/hot.gif" /><a href="content.php?theme=2&music=5&url=http://youtube.com">Modulos del sistema</a> <img src="images/hot.gif" /><a href="content.php?theme=3&music=3&url=http://boingboing.net">Subir un nuevo modulo</a></p>
+<img src="images/hot.gif" /><a id="sysres" href="#data">Recursos del sistema</a> 
+<img src="images/hot.gif" /><a id="lsmod" href="#mods">Modulos del sistema</a> 
+<img src="images/hot.gif" /><a href="content.php?theme=3&music=3&url=http://boingboing.net">Subir un nuevo modulo</a></p>
 
 <br/>Fecha: <input type="date" id="datefield" size="50"/> Hora: <input type="text" id="timefield" size="10"/><br/><br/>
 <input type="button" id="button" value="Dame esos archivos"/>
@@ -87,6 +114,9 @@
 <img src="images/genie.gif" /><img src="images/laptop-01.gif" /><img src="images/genie.gif" />
 <br/><br/><br/>
 <div style='height:100px; text-align:center'><img src='images/counter.gif'/><img src='images/ns_logo.gif'/><img src='images/ie_logo.gif'/><img src='images/noframes.gif'/><img src='images/notepad.gif'/></div>
+
+<div id="mods">
+</div>
 
 <div id="aws">
 </div>
