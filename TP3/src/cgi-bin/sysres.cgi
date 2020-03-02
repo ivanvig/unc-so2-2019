@@ -47,7 +47,7 @@ close(FH);
 open (FH, "<", "/proc/uptime");
 
 my $uptime = <FH>;
-$uptime = chomp($uptime);
+chomp($uptime);
 
 close(FH);
 

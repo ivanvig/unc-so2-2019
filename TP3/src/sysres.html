@@ -10,12 +10,22 @@
         <script>
                 class Greetings extends React.Component
                 {
-			state = {name : "kekere"}
+			state = {
+				cpuinfo : {},
+				meminfo : {},
+				uptime : '',
+				time : ''
+			}
 
      			componentDidMount() {
-     			     fetch("cgi-bin/test.cgi")
+     			     fetch("cgi-bin/sysres.cgi")
      			          .then(res => res.json())
-     			          .then(json => this.setState({ name : json.a}, () => 
+     			          .then(json => this.setState({ 
+					  cpuinfo : json.cpu,
+					  meminfo : json.mem,
+					  uptime : json.uptime,
+					  time : json.time
+				  }, () => 
      			          console.log("json fetched", json)))
      			          .catch(err => console.log(err))
     
@@ -24,7 +34,12 @@
 
                     	render()
                     	{
-                        	return React.createElement('h1', null, 'Greetings, ' + this.state.name + '!');
+				return React.createElement("ul",
+					null,
+					Object.entries(this.state.meminfo).map(([k,v]) => (
+						React.createElement("li",{key:k+v},k + ": " +v)
+					))
+				)
                     	}
                 }
 
@@ -32,7 +47,7 @@
 	    window.onload = function()
             {
 		ReactDOM.render(
-                    React.createElement(Greetings, { name : "asd" }),
+			React.createElement(Greetings, null),
                     document.getElementById('root')
                 );
             };
