@@ -67,12 +67,12 @@
     					});
 				    	return $table;
 				});
-			}, success: function() {
-			    window.location.href = $("#lsmod").attr('href')
+			}).done( function(x){
+			    $("#mods").show();
+			    window.location.href = $("#lsmod").attr('href');
 			});
 			$("#data").hide();
 			$("#aws").hide();
-			$("#mods").show();
 			$("#modupload").hide();
 
 
@@ -102,12 +102,12 @@
     					});
 				    	return $table;
 				});
-			}, success: function() {
-			    window.location.href = $("#aws");
+			}).done( function(x){
+			    $("#aws").show();
+			    window.location = "#aws";
 			});
 			$("#mods").hide();
 			$("#data").hide();
-			$("#aws").show();
 			$("#modupload").hide();
 
 
@@ -137,8 +137,10 @@
 				$('#uptimedata').append(
 					`<p>${json.uptime}</p>`
 				);
+			}).done( function(x){
+			    $("#data").show();
+			    window.location = "#data";
 	        	});
-			$("#data").show();
 			$("#aws").hide();
 			$("#mods").hide();
 			$("#modupload").hide();
