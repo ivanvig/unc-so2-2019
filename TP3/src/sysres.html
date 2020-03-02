@@ -1,56 +1,8 @@
 <html>
     <head>
         <title>React Hello World</title>
-        <script src="https://unpkg.com/react@15/dist/react.js"></script>
-        <script src="https://unpkg.com/react-dom@15/dist/react-dom.js"></script>
+    <!-- Script to get JSON file and display its content -->
     </head>
     <body>
-        <div id="root"></div>
-
-        <script>
-                class Greetings extends React.Component
-                {
-			state = {
-				cpuinfo : {},
-				meminfo : {},
-				uptime : '',
-				time : ''
-			}
-
-     			componentDidMount() {
-     			     fetch("cgi-bin/sysres.cgi")
-     			          .then(res => res.json())
-     			          .then(json => this.setState({ 
-					  cpuinfo : json.cpu,
-					  meminfo : json.mem,
-					  uptime : json.uptime,
-					  time : json.time
-				  }, () => 
-     			          console.log("json fetched", json)))
-     			          .catch(err => console.log(err))
-    
-     			 }
-
-
-                    	render()
-                    	{
-				return React.createElement("ul",
-					null,
-					Object.entries(this.state.meminfo).map(([k,v]) => (
-						React.createElement("li",{key:k+v},k + ": " +v)
-					))
-				)
-                    	}
-                }
-
-		
-	    window.onload = function()
-            {
-		ReactDOM.render(
-			React.createElement(Greetings, null),
-                    document.getElementById('root')
-                );
-            };
-        </script>
     </body>
 </html>
