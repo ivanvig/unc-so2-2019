@@ -10,8 +10,41 @@
     		return (Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(date.getFullYear(), 0, 0)) / 24 / 60 / 60 / 1000;
 	}
 	$(document).ready(function() {
+		$("#modul").click(function(){
+			$("#data").hide();
+			$("#aws").hide();
+			$("#mods").hide();
+			$("#modupload").show();
+		});
+
+		$("#modup").click(function(){
+			$("#modup").val("Subiendo");
+			$.ajax({
+			    // Your server script to process the upload
+			    url: 'cgi-bin/loadmod.cgi',
+			    type: 'POST',
+
+			    // Form data
+			    data: new FormData($('form')[0]),
+
+			    // Tell jQuery not to process data or worry about content-type
+			    // You *must* include these options!
+			    cache: false,
+			    contentType: false,
+			    processData: false,
+			    success: function(msg){
+				window.alert(msg);
+			    }
+			});
+			$(document).ajaxStop(function(){
+				$("#modup").val("Subir");
+			});
+			
+		});
+
 		$("#lsmod").click(function(){
 			$.getJSON("cgi-bin/lsmod.cgi", function(json) {
+				$("#mods").empty();
 				$("#mods").append(function(){
 					var $table = $('<table />');
 					$table.append('<tr><th>Module</th><th>Size</th><th>Used by</th></tr>');
@@ -28,6 +61,7 @@
 			$("#data").hide();
 			$("#aws").hide();
 			$("#mods").show();
+			$("#modupload").hide();
 
 
 		});
@@ -44,6 +78,7 @@
 
 			$.getJSON(`cgi-bin/aws_req.cgi?anio=${dateval[0]}&dia=${dateval[1]}&hora=${hora}`, function(json) {
 				$("#button").val("Dame esos archivos");
+				$("#aws").empty();
 				$("#aws").append(function(){
 					var $table = $('<table />');
     					$.each(json, function(i, item){
@@ -59,12 +94,14 @@
 			$("#mods").hide();
 			$("#data").hide();
 			$("#aws").show();
+			$("#modupload").hide();
 
 
 		});
 
 		$("#sysres").click(function(){
 	        	$.getJSON('cgi-bin/sysres.cgi', function(json) {
+				$("#cpu").empty();
 				$('#cpu').append(
 					Object.values(json.cpu).map(function(core) {
 						return Object.keys(core).sort().map(function(key) {
@@ -87,6 +124,7 @@
 			$("#data").show();
 			$("#aws").hide();
 			$("#mods").hide();
+			$("#modupload").hide();
 		});
 	    });
 </script>
@@ -100,7 +138,7 @@
 <p>Pruebe alguna de las siguientes opciones:
 <img src="images/hot.gif" /><a id="sysres" href="#data">Recursos del sistema</a> 
 <img src="images/hot.gif" /><a id="lsmod" href="#mods">Modulos del sistema</a> 
-<img src="images/hot.gif" /><a href="content.php?theme=3&music=3&url=http://boingboing.net">Subir un nuevo modulo</a></p>
+<img src="images/hot.gif" /><a id="modul" href="#modupload">Subir un nuevo modulo</a></p>
 
 <br/>Fecha: <input type="date" id="datefield" size="50"/> Hora: <input type="text" id="timefield" size="10"/><br/><br/>
 <input type="button" id="button" value="Dame esos archivos"/>
@@ -114,6 +152,13 @@
 <img src="images/genie.gif" /><img src="images/laptop-01.gif" /><img src="images/genie.gif" />
 <br/><br/><br/>
 <div style='height:100px; text-align:center'><img src='images/counter.gif'/><img src='images/ns_logo.gif'/><img src='images/ie_logo.gif'/><img src='images/noframes.gif'/><img src='images/notepad.gif'/></div>
+
+<div id="modupload" style="display:none;">
+	<form enctype="multipart/form-data">
+	    <input name="file" type="file" />
+	    <input id="modup" type="button" value="Subir" />
+	</form>
+</div>
 
 <div id="mods">
 </div>
