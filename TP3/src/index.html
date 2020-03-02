@@ -10,11 +10,21 @@
     		return (Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(date.getFullYear(), 0, 0)) / 24 / 60 / 60 / 1000;
 	}
 	$(document).ready(function() {
+		$(document).on("click", ".rmod", function() {
+			var mod = $(this).attr('id');
+			$.get("cgi-bin/rmmod.cgi", {modname : mod})
+				.done(function(msg) {
+					$("#lsmod").trigger("click");
+					alert(msg);
+				});
+		});
+
 		$("#modul").click(function(){
 			$("#data").hide();
 			$("#aws").hide();
 			$("#mods").hide();
 			$("#modupload").show();
+			window.location.href = $("#modul").attr('href');
 		});
 
 		$("#modup").click(function(){
@@ -44,19 +54,21 @@
 
 		$("#lsmod").click(function(){
 			$.getJSON("cgi-bin/lsmod.cgi", function(json) {
-				$("#mods").empty();
-				$("#mods").append(function(){
+				$("#moddata").empty();
+				$("#moddata").append(function(){
 					var $table = $('<table />');
 					$table.append('<tr><th>Module</th><th>Size</th><th>Used by</th></tr>');
     					$.each(json, function(i, item){
     					    var $tr = $('<tr />');
     					    $tr.appendTo($table);
-    					    $tr.append('<td>'+ item.mod + '</td>');
+					    $tr.append('<td>'+ item.mod + `<a id=${item.mod} href=#mods class=rmod style="float: right;"><small> [remove]</small></a>`+'</td>');
     					    $tr.append('<td>'+ item.size + '</td>');
     					    $tr.append('<td>'+ item.used + '</td>');
     					});
 				    	return $table;
 				});
+			}, success: function() {
+			    window.location.href = $("#lsmod").attr('href')
 			});
 			$("#data").hide();
 			$("#aws").hide();
@@ -78,8 +90,8 @@
 
 			$.getJSON(`cgi-bin/aws_req.cgi?anio=${dateval[0]}&dia=${dateval[1]}&hora=${hora}`, function(json) {
 				$("#button").val("Dame esos archivos");
-				$("#aws").empty();
-				$("#aws").append(function(){
+				$("#awsdata").empty();
+				$("#awsdata").append(function(){
 					var $table = $('<table />');
     					$.each(json, function(i, item){
     					    var $tr = $('<tr />');
@@ -90,6 +102,8 @@
     					});
 				    	return $table;
 				});
+			}, success: function() {
+			    window.location.href = $("#aws");
 			});
 			$("#mods").hide();
 			$("#data").hide();
@@ -101,23 +115,26 @@
 
 		$("#sysres").click(function(){
 	        	$.getJSON('cgi-bin/sysres.cgi', function(json) {
-				$("#cpu").empty();
-				$('#cpu').append(
+				$("#cpudata").empty();
+				$('#cpudata').append(
 					Object.values(json.cpu).map(function(core) {
 						return Object.keys(core).sort().map(function(key) {
 							return `<p>${key}: ${core[key]}</p>`
 						}).join('') + '<br><br>';
 					})
 				);
-				$('#mem').append(
+				$("#memdata").empty();
+				$('#memdata').append(
 					Object.keys(json.mem).sort().map(function(key) {
 						return `<p>${key}: ${json.mem[key]}</p>`
 					}).join('')
 				);
-				$('#time').append(
+				$("#timedata").empty();
+				$('#timedata').append(
 					`<p>${json.time}</p>`
 				);
-				$('#uptime').append(
+				$("#uptimedata").empty();
+				$('#uptimedata').append(
 					`<p>${json.uptime}</p>`
 				);
 	        	});
@@ -160,25 +177,39 @@
 	</form>
 </div>
 
-<div id="mods">
+<div id="datacontainer" style="text-align: left;">
+<div id="mods" style="display: none;">
+	<h1>Lista de Modulos Cargados</h1>
+	<div id="moddata"></div>
 </div>
 
-<div id="aws">
+<div id="aws" style="display: none;">
+	<h1>Lista de Archivos Disponibles</h1>
+	<div id="awsdata"></div>
 </div>
 
-<div id="data"> 
-
+<div id="data" style="display: none;"> 
+	<h1>Recursos del Sistema</h1>
 <div id="cpu"> 
+	<h2>CPU info</h2>
+	<div id="cpudata"></div>
 </div>
 
 <div id="mem"> 
+	<h2>Mem info</h2>
+	<div id="memdata"></div>
 </div>
 
 <div id="time"> 
+	<h2>Fecha y hora del sistema</h2>
+	<div id="timedata"></div>
 </div>
 
 
 <div id="uptime"> 
+	<h2>Uptime y carga</h2>
+	<div id="uptimedata"></div>
+</div>
 </div>
 </div>
 </body>
