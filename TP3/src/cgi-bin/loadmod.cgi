@@ -3,24 +3,30 @@ use warnings;
 use CGI;
 use JSON;
 
+$SIG{__DIE__} = sub { print @_, "\n"; exit 255 };
+
 my $cgi = CGI -> new();
 
 my $updir = "/srv/http/upload";
-my $fname = $cgi->param("data");
+my $fname = $cgi->param("file");
 
 if ( !$fname ) {
 	print "Error al subir archivo";
 	exit(-1);
 }
 
-my $fhandle = $cgi->upload("data");
+my $fhandler = $cgi->upload("file")->handle;
 
-open ( UPLOADFILE, ">$updir/$fname" ) or die "$!"; binmode UPLOADFILE;
+open ( UPLOADFILE, ">$updir/$fname" ) or die "$!"; 
+binmode UPLOADFILE;
 
-while ( <$fhandle> ) {
-	print UPLOADFILE;
+my $buffer;
+
+while ( my $rbytes = $fhandler->read($buffer, 1024) ) {
+	print UPLOADFILE $buffer;
 }
-close $fhandle;
+
+close $fhandler;
 close UPLOADFILE;
 
 my $modinfo = `modinfo $updir/$fname`;
@@ -30,10 +36,10 @@ if ($? != 0){
 	exit(-1);
 }
 
-my $comm = `sudo insmod $updir/$fname`;
+my $comm = `/usr/bin/sudo /usr/bin/insmod $updir/$fname`;
 
 if ($? != 0){
-	print "Error al carga modulo";
+	print $comm;
 	exit(-1);
 }else{
 	print("Modulo cargado");
